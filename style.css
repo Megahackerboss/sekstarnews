@@ -35,7 +35,7 @@ body {
 
 #back-button {
     /* POPRAWIONA ŚCIEŻKA DO TWOJEGO LOKALNEGO OBRAZKA */
-    background-image: url('../images/967946071cacb3fffff3.svg');
+    background-image: url('images/967946071cacb3fffff3.svg');
     width: 200px; /* Dostosuj szerokość do wyglądu przycisku. */
     height: 90px;
 }
@@ -188,4 +188,5 @@ body {
 
 #comments-list .comment-message {
     color: #e0e0e0;
+
 }
