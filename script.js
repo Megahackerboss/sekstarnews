@@ -1,179 +1,156 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // === DOM ELEMENTS ===
+    // === KONFIGURACJA BASEROW (Wklej tutaj swoje dane z Kroku 4) ===
+    const baserowConfig = {
+        apiToken: "YOUR_DATABASE_TOKEN", // <-- WKLEJ SWÓJ DATABASE TOKEN
+        articlesTableId: "YOUR_ARTICLES_TABLE_ID", // <-- WKLEJ ID TABELI Articles
+        commentsTableId: "YOUR_COMMENTS_TABLE_ID"  // <-- WKLEJ ID TABELI Comments
+    };
+    const baserowApiUrl = "https://api.baserow.io/api/database/rows/table/";
+
+    // === ELEMENTY DOM (bez zmian) ===
     const backButton = document.getElementById('back-button');
     const mainView = document.getElementById('main-view');
-    const featuredSliderContainer = document.getElementById('featured-slider-container');
-    const newsListView = document.getElementById('news-list-view');
-    const articleView = document.getElementById('article-view');
-    const navTitle = document.querySelector('.nav-title');
-
-    // Article View Elements
+    // ... i tak dalej, reszta elementów DOM ...
     const articleContent = document.getElementById('article-content');
-    const articleDate = document.getElementById('article-date');
-    const articleAuthor = document.getElementById('article-author');
     const likeButton = document.getElementById('like-button');
     const likeCountSpan = document.getElementById('like-count');
-    const shareButton = document.getElementById('share-button');
     const commentForm = document.getElementById('comment-form');
     const commentsList = document.getElementById('comments-list');
-
+    
     let allArticles = [];
     let currentArticle = null;
-    let slideInterval;
 
-    // === DATA HANDLING (localStorage) ===
-    const storage = {
-        getLikes: () => JSON.parse(localStorage.getItem('article_likes') || '{}'),
-        saveLikes: (likes) => localStorage.setItem('article_likes', JSON.stringify(likes)),
-        getComments: () => JSON.parse(localStorage.getItem('article_comments') || '{}'),
-        saveComments: (comments) => localStorage.setItem('article_comments', JSON.stringify(comments)),
-    };
+    // --- GŁÓWNA LOGIKA APLIKACJI ---
 
-    // === CORE FUNCTIONS ===
-    async function loadArticles() {
+    // 1. Ładujemy lokalną konfigurację artykułów (nadal z articles.json)
+    async function loadArticlesConfig() {
         try {
             const response = await fetch('articles/articles.json');
             allArticles = await response.json();
-            const featuredArticles = allArticles.filter(a => a.featured).slice(0, 5);
-            
-            setupFeaturedSlider(featuredArticles);
-            displayNewsList(allArticles); // Display all articles in the list
-        } catch (error) {
-            console.error("Nie udało się wczytać artykułów:", error);
-        }
+            // Reszta logiki do budowy slidera i listy zostaje bez zmian
+        } catch (error) { console.error("Błąd ładowania articles.json:", error); }
     }
 
-    function displayArticle(articleId) {
+    // 2. Otwieranie artykułu i pobieranie DYNAMICZNYCH danych z Baserow
+    async function displayArticle(articleId) {
         currentArticle = allArticles.find(a => a.id == articleId);
-        if (currentArticle) {
-            // Populate article content and meta
-            articleDate.textContent = currentArticle.date;
-            articleAuthor.textContent = `Autor: ${currentArticle.author}`;
-            articleContent.innerHTML = currentArticle.content;
+        if (!currentArticle) return;
 
-            // Setup interactive elements
-            setupLikeButton(articleId);
-            setupShareButton(currentArticle);
-            setupCommentSection(articleId);
+        // Wypełniamy statyczną treść
+        articleContent.innerHTML = currentArticle.content;
+        // ... wypełnij datę, autora itp. ...
 
-            // Switch views
-            mainView.classList.add('hidden');
-            articleView.classList.remove('hidden');
-            backButton.classList.remove('hidden');
-            navTitle.style.marginLeft = '0px';
-            clearInterval(slideInterval);
+        // Przełączamy widoki
+        mainView.classList.add('hidden');
+        articleView.classList.remove('hidden');
+        
+        // POBIERAMY DANE Z BASEROW
+        try {
+            // Używamy Promise.all, aby pobrać polubienia i komentarze jednocześnie
+            const [likesData, commentsData] = await Promise.all([
+                getLikes(articleId),
+                getComments(articleId)
+            ]);
+            updateLikeButton(likesData.likes, likesData.row_id); // Przekazujemy row_id do aktualizacji
+            loadComments(commentsData);
+
+        } catch (error) {
+            console.error("Błąd pobierania danych z Baserow:", error);
+            // Wyświetl użytkownikowi informację o błędzie
+            likeCountSpan.textContent = 'Błąd';
+            commentsList.innerHTML = '<p>Nie udało się załadować komentarzy.</p>';
         }
     }
-    
-    function showMainView() {
-        articleView.classList.add('hidden');
-        mainView.classList.remove('hidden');
-        backButton.classList.add('hidden');
-        navTitle.style.marginLeft = `-${backButton.offsetWidth}px`;
-        startSlideInterval();
-        currentArticle = null; // Clear current article
-    }
-    
-    // === INTERACTIVE ELEMENTS SETUP ===
 
-    // --- Like Button Logic ---
-    function setupLikeButton(articleId) {
-        const allLikes = storage.getLikes();
-        let likes = allLikes[articleId] || { count: 0, users: [] }; // For simplicity, we just check a flag
-        
-        likeCountSpan.textContent = likes.count;
-        if (likes.users.includes('currentUser')) { // Simple check
-            likeButton.classList.add('liked');
-            likeButton.querySelector('.heart-icon').textContent = '♥';
-        } else {
-            likeButton.classList.remove('liked');
-            likeButton.querySelector('.heart-icon').textContent = '♡';
-        }
-        
-        likeButton.onclick = () => handleLikeClick(articleId);
-    }
+    // --- FUNKCJE KOMUNIKACJI Z BASEROW ---
 
-    function handleLikeClick(articleId) {
-        const allLikes = storage.getLikes();
-        let likes = allLikes[articleId] || { count: 0, users: [] };
-        
-        if (likes.users.includes('currentUser')) {
-            likes.count--;
-            likes.users = []; // Remove user
-        } else {
-            likes.count++;
-            likes.users = ['currentUser']; // Add user
-        }
-
-        allLikes[articleId] = likes;
-        storage.saveLikes(allLikes);
-        setupLikeButton(articleId); // Refresh button state
-    }
-
-    // --- Share Button Logic ---
-    function setupShareButton(article) {
-        shareButton.onclick = async () => {
-            const shareData = {
-                title: article.title,
-                text: `Sprawdź ten artykuł z Brawl Stars News: ${article.title}`,
-                // Tworzymy unikalny link do artykułu, chociaż strona jest jednostronicowa
-                url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
-            };
-
-            try {
-                // Próba 1: Użycie natywnego udostępniania (najlepsze dla telefonów)
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                    // Jeśli udostępnianie się powiedzie, funkcja kończy działanie tutaj.
-                    return; 
-                }
-                // Jeśli navigator.share nie istnieje, kod przejdzie dalej.
-                
-                // Próba 2: Kopiowanie do schowka (dla komputerów i niektórych WebView)
-                if (navigator.clipboard) {
-                    await navigator.clipboard.writeText(shareData.url);
-                    alert('Link do artykułu skopiowany do schowka!');
-                } else {
-                    // Jeśli obie powyższe metody zawiodą...
-                    throw new Error('APIs not supported');
-                }
-
-            } catch (err) {
-                console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
-                
-                // Próba 3: Ostateczne rozwiązanie - okienko do ręcznego kopiowania
-                window.prompt(
-                    "Nie udało się udostępnić automatycznie. Skopiuj ten link ręcznie (Ctrl+C):", 
-                    shareData.url
-                );
-            }
+    // Pobierz polubienia dla danego artykułu
+    async function getLikes(articleId) {
+        const url = `${baserowApiUrl}${baserowConfig.articlesTableId}/?user_field_names=true&filter__article_id__equal=${articleId}`;
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Token ${baserowConfig.apiToken}` }
+        });
+        const data = await response.json();
+        const articleData = data.results[0];
+        return {
+            likes: articleData ? articleData.likes : 0,
+            row_id: articleData ? articleData.id : null // Baserow używa "id" jako identyfikatora wiersza
         };
     }
 
-    // --- Comments Logic ---
-    function setupCommentSection(articleId) {
-        loadComments(articleId);
-        commentForm.onsubmit = (e) => {
-            e.preventDefault();
-            handleCommentSubmit(articleId);
-        };
+    // Pobierz komentarze dla danego artykułu
+    async function getComments(articleId) {
+        const url = `${baserowApiUrl}${baserowConfig.commentsTableId}/?user_field_names=true&filter__article_id__equal=${articleId}&order_by=-id`; // Sortuj od najnowszych
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Token ${baserowConfig.apiToken}` }
+        });
+        const data = await response.json();
+        return data.results;
     }
 
-    function loadComments(articleId) {
-        const allComments = storage.getComments();
-        const articleComments = allComments[articleId] || [];
+    // Dodaj polubienie (aktualizuj wiersz w Baserow)
+    async function addLike(currentLikes, rowId) {
+        if (!rowId) {
+            console.error("Nie można polubić artykułu, który nie istnieje w bazie Baserow!");
+            return currentLikes; // Zwróć starą wartość
+        }
+        const url = `${baserowApiUrl}${baserowConfig.articlesTableId}/${rowId}/?user_field_names=true`;
+        const newLikes = currentLikes + 1;
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Token ${baserowConfig.apiToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ "likes": newLikes })
+        });
+        const data = await response.json();
+        return data.likes;
+    }
+
+    // Dodaj komentarz (stwórz nowy wiersz w Baserow)
+    async function addComment(author, message) {
+        const url = `${baserowApiUrl}${baserowConfig.commentsTableId}/?user_field_names=true`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Token ${baserowConfig.apiToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                "article_id": currentArticle.id,
+                "author": author,
+                "message": message
+            })
+        });
+        return response.ok; // Zwróć true, jeśli się udało
+    }
+
+    // --- AKTUALIZACJA INTERFEJSU ---
+
+    function updateLikeButton(likes, rowId) {
+        likeCountSpan.textContent = likes;
+        likeButton.onclick = async () => {
+            likeButton.disabled = true; // Zapobiegaj wielokrotnemu klikaniu
+            const newLikes = await addLike(likes, rowId);
+            updateLikeButton(newLikes, rowId);
+            likeButton.disabled = false;
+        };
+    }
+    
+    function loadComments(comments) {
         commentsList.innerHTML = '';
-        if (articleComments.length === 0) {
+        if (comments.length === 0) {
             commentsList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
             return;
         }
-        articleComments.forEach(comment => {
+        comments.forEach(comment => {
             const commentEl = document.createElement('div');
             commentEl.className = 'comment';
             commentEl.innerHTML = `
                 <div class="comment-header">
-                    <span class="comment-author">${comment.name}</span>
-                    <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
+                    <span class="comment-author">${comment.author}</span>
+                    <span class="comment-date">${new Date(comment['Created on']).toLocaleString()}</span>
                 </div>
                 <p class="comment-message">${comment.message}</p>
             `;
@@ -181,55 +158,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function handleCommentSubmit(articleId) {
+    commentForm.onsubmit = async (e) => {
+        e.preventDefault();
         const nameInput = document.getElementById('comment-name');
         const messageInput = document.getElementById('comment-message');
-
-        const newComment = {
-            name: nameInput.value,
-            message: messageInput.value,
-            timestamp: new Date().toISOString()
-        };
-
-        const allComments = storage.getComments();
-        const articleComments = allComments[articleId] || [];
-        articleComments.push(newComment);
-        allComments[articleId] = articleComments;
         
-        storage.saveComments(allComments);
-        
-        // Reset form and reload comments
-        nameInput.value = '';
-        messageInput.value = '';
-        loadComments(articleId);
-    }
-    
-    // === INITIALIZATION & EVENT LISTENERS ===
-    function init() {
-        loadArticles();
-        backButton.addEventListener('click', showMainView);
-        
-        function handleArticleClick(event) {
-            const targetElement = event.target.closest('[data-id]');
-            if (targetElement) {
-                displayArticle(targetElement.dataset.id);
-                window.scrollTo(0, 0);
-            }
+        const success = await addComment(nameInput.value, messageInput.value);
+        if (success) {
+            commentForm.reset();
+            // Odśwież tylko komentarze, bez przeładowywania całego artykułu
+            const commentsData = await getComments(currentArticle.id);
+            loadComments(commentsData);
+        } else {
+            alert("Nie udało się dodać komentarza.");
         }
-        featuredSliderContainer.addEventListener('click', handleArticleClick);
-        newsListView.addEventListener('click', handleArticleClick);
-        
-        navTitle.style.marginLeft = `-${backButton.offsetWidth}px`;
-    }
+    };
     
-    // Slider functions (unchanged from previous version)
-    let currentSlideIndex = 0;
-    function setupFeaturedSlider(articles) { if (articles.length === 0) return; featuredSliderContainer.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`; const sliderContent = featuredSliderContainer.querySelector('.slider-content'); const sliderNav = featuredSliderContainer.querySelector('.slider-nav'); articles.forEach((article, index) => { const slide = document.createElement('div'); slide.className = 'slide'; slide.dataset.id = article.id; slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`; sliderContent.appendChild(slide); const navDot = document.createElement('span'); navDot.className = 'nav-dot'; navDot.dataset.index = index; sliderNav.appendChild(navDot); }); showSlide(0); startSlideInterval(); sliderNav.addEventListener('click', (e) => { if (e.target.classList.contains('nav-dot')) { const index = parseInt(e.target.dataset.index, 10); showSlide(index); resetSlideInterval(); } }); }
-    function showSlide(index) { const slides = featuredSliderContainer.querySelectorAll('.slide'); const dots = featuredSliderContainer.querySelectorAll('.nav-dot'); if (index >= slides.length) index = 0; if (index < 0) index = slides.length - 1; slides.forEach(slide => slide.classList.remove('active')); dots.forEach(dot => dot.classList.remove('active')); slides[index].classList.add('active'); dots[index].classList.add('active'); currentSlideIndex = index; }
-    function nextSlide() { showSlide(currentSlideIndex + 1); }
-    function startSlideInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 8000); }
-    function resetSlideInterval() { clearInterval(slideInterval); startSlideInterval(); }
-    function displayNewsList(articles) { newsListView.innerHTML = ''; articles.forEach(article => { const card = document.createElement('div'); card.className = 'article-card'; card.dataset.id = article.id; card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`; newsListView.appendChild(card); }); }
-    
-    init();
+    // --- Inicjalizacja i reszta kodu (bez większych zmian) ---
+    // Wklej tutaj resztę swojego kodu JavaScript, który odpowiada za slider,
+    // przełączanie widoków, przycisk wstecz itp.
+    // Upewnij się, że kliknięcie na artykuł wywołuje nową funkcję `displayArticle(id)`.
+
 });
