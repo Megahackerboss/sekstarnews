@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="pl"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brawl Stars News</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <button id="back-button" class="nav-button hidden">
+             <!-- Użyj rozwiązania A lub B z poprzedniej odpowiedzi -->
+        </button>
+        <div class="nav-title"><img src="images/04a2de9d503f501aca1e.svg" style="height:lem; vertical-align: -8px;">SEKSTAR NEWS</div>
+    </header>
+
+    <main id="app-container">
+        <!-- Główny widok z listą newsów -->
+        <div id="main-view">
+            <div id="featured-slider-container"></div>
+            <div id="news-list-view"></div>
+        </div>
+
+        <!-- Widok pojedynczego artykułu -->
+        <div id="article-view" class="hidden">
+            <!-- Kontener na dynamiczną treść artykułu -->
+            <div id="article-content-wrapper">
+                 <!-- Metadane (data, autor) będą wstawiane tutaj przez JS -->
+                <div class="article-meta">
+                    <span id="article-date"></span> | <span id="article-author"></span>
+                </div>
+                <!-- Właściwa treść artykułu -->
+                <div id="article-content"></div>
+            </div>
+
+            <!-- Przyciski akcji (Polub, Udostępnij) -->
+            <div class="article-actions">
+                <button id="like-button" class="action-button">
+                    <span class="heart-icon">♡</span> Polub (<span id="like-count">0</span>)
+                </button>
+                <button id="share-button" class="action-button"><img src="images/288ad794778de2e73599.svg" style="height: 1em; vertical-align: -3px;">Udostępnij</button>
+            </div>
+
+            <!-- Sekcja Komentarzy -->
+            <div class="comments-section">
+                <h3>Komentarze</h3>
+                <form id="comment-form">
+                    <input type="text" id="comment-name" placeholder="Twój nick" required="">
+                    <textarea id="comment-message" placeholder="Twoja wiadomość..." required=""></textarea>
+                    <button type="submit">Dodaj komentarz</button>
+                </form>
+                <div id="comments-list">
+                    <!-- Komentarze będą dodawane tutaj przez JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/script.js"></script>
+
+</body></html>

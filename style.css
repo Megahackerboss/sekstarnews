@@ -1,0 +1,191 @@
+/* --- GŁÓWNE STYLE --- */
+body {
+    background-color: #142a4a;
+    font-family: 'Arial Black', Gadget, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: white;
+}
+
+/* --- PASEK NAWIGACJI --- */
+.navbar {
+    display: flex;
+    align-items: center;
+    background-color: #1f3a61;
+    padding: 10px 20px;
+    border-bottom: 3px solid #4a68a5;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav-button {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    transition: transform 0.1s ease;
+}
+
+.nav-button:active {
+    transform: scale(0.9);
+}
+
+#back-button {
+    /* POPRAWIONA ŚCIEŻKA DO TWOJEGO LOKALNEGO OBRAZKA */
+    background-image: url('../images/967946071cacb3fffff3.svg');
+    width: 200px; /* Dostosuj szerokość do wyglądu przycisku. */
+    height: 90px;
+}
+
+.nav-title {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffdd4b;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    /* Poprawka marginesu, aby lepiej się centrował */
+    margin-left: 50%; 
+}
+
+/* --- Reszta stylów (bez zmian) --- */
+#app-container { padding: 25px; }
+#main-view { display: flex; gap: 25px; }
+#featured-slider-container { flex: 1; position: relative; }
+.slider-content { position: relative; overflow: hidden; border-radius: 8px; border: 2px solid #4a68a5; }
+.slide { display: none; cursor: pointer; }
+.slide img { width: 100%; display: block; }
+.slide-title { background: rgba(0, 0, 0, 0.7); color: #fff; text-align: center; padding: 15px; font-size: 20px; width: 100%; box-sizing: border-box; }
+.slide.active { display: block; }
+.slider-nav { text-align: center; margin-top: 15px; }
+.nav-dot { cursor: pointer; height: 12px; width: 12px; margin: 0 5px; background-color: #4a68a5; border-radius: 50%; display: inline-block; transition: background-color 0.3s ease; }
+.nav-dot.active, .nav-dot:hover { background-color: #ffdd4b; }
+#news-list-view { flex: 1; display: grid; grid-template-columns: 1fr; gap: 15px; max-height: 600px; overflow-y: auto; }
+.article-card { background-color: #20385a; border: 2px solid #4a68a5; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; align-items: center; }
+.article-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(255, 221, 75, 0.2); }
+.article-card img { width: 120px; height: 80px; object-fit: cover; }
+.article-card-content { padding: 15px; }
+#article-view { background-color: #1f3a61; padding: 25px; border-radius: 8px; border: 2px solid #4a68a5; }
+@media (max-width: 900px) { #main-view { flex-direction: column; } #news-list-view { max-height: none; } }
+.hidden { display: none !important; }
+/* --- STYLE DLA NOWYCH ELEMENTÓW (DODAJ NA KOŃCU PLIKU) --- */
+
+/* Metadane artykułu (data, autor) */
+.article-meta {
+    margin-bottom: 20px;
+    color: #aab8d3;
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+/* Kontener na przyciski akcji */
+.article-actions {
+    margin: 30px 0;
+    display: flex;
+    gap: 15px;
+}
+
+.action-button {
+    background-color: #2a4879;
+    color: #fff;
+    border: 2px solid #4a68a5;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-family: 'Arial Black', Gadget, sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.action-button:hover {
+    background-color: #3a5a8f;
+}
+
+/* Styl dla serduszka */
+#like-button .heart-icon {
+    font-size: 24px;
+    line-height: 1;
+    color: #ff5e5e;
+}
+
+/* Styl dla polubionego przycisku */
+#like-button.liked {
+    background-color: #ff5e5e;
+    color: white;
+}
+#like-button.liked .heart-icon {
+    color: white;
+}
+
+
+/* Sekcja komentarzy */
+.comments-section {
+    margin-top: 40px;
+    border-top: 2px solid #4a68a5;
+    padding-top: 20px;
+}
+
+.comments-section h3 {
+    color: #ffdd4b;
+    margin-bottom: 20px;
+}
+
+#comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+#comment-form input, #comment-form textarea {
+    background-color: #142a4a;
+    border: 1px solid #4a68a5;
+    border-radius: 4px;
+    padding: 10px;
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+#comment-form button {
+    align-self: flex-start;
+    background-color: #ffdd4b;
+    color: #142a4a;
+    border: none;
+    padding: 10px 25px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+/* Lista komentarzy */
+#comments-list .comment {
+    background-color: #20385a;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    border-left: 3px solid #ffdd4b;
+}
+
+#comments-list .comment-author {
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+#comments-list .comment-date {
+    font-size: 12px;
+    color: #aab8d3;
+    margin-left: 10px;
+}
+
+#comments-list .comment-message {
+    color: #e0e0e0;
+}
