@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === KONFIGURACJA BASEROW (Wklej tutaj swoje dane z Kroku 4) ===
     const baserowConfig = {
-        apiToken: "YOUR_DATABASE_TOKEN", // <-- WKLEJ SWÓJ DATABASE TOKEN
-        articlesTableId: "YOUR_ARTICLES_TABLE_ID", // <-- WKLEJ ID TABELI Articles
-        commentsTableId: "YOUR_COMMENTS_TABLE_ID"  // <-- WKLEJ ID TABELI Comments
+        apiToken: "AgaU9zCmgy88haUkYSnWIJCzl3uqoQRk", // <-- WKLEJ SWÓJ DATABASE TOKEN
+        articlesTableId: "731822", // <-- WKLEJ ID TABELI Articles
+        commentsTableId: "731833"  // <-- WKLEJ ID TABELI Comments
     };
     const baserowApiUrl = "https://api.baserow.io/api/database/rows/table/";
 
@@ -180,3 +180,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // Upewnij się, że kliknięcie na artykuł wywołuje nową funkcję `displayArticle(id)`.
 
 });
+
