@@ -54,24 +54,46 @@
             </div>
         </div>
     </main>
-    <!-- Panel Edytora (początkowo ukryty) -->
-<div id="editor-view" class="hidden">
-    <h2>Edytor Artykułów</h2>
-    <form id="editor-form">
-        <input type="hidden" id="editor-article-id">
-        <label>Order:</label><input type="number" id="editor-order" required>
-        <label>Tytuł:</label><input type="text" id="editor-title" required>
-        <label>Autor:</label><input type="text" id="editor-author" required>
-        <label>Kategoria:</label><input type="text" id="editor-category">
-        <label>URL Miniaturki:</label><input type="text" id="editor-thumbnail" required>
-        <label>Treść (HTML):</label><textarea id="editor-content" rows="15" required></textarea>
-        <div class="editor-actions">
-            <button type="submit">Zapisz Artykuł</button>
-            <button type="button" id="editor-cancel">Anuluj</button>
-            <button type="button" id="editor-delete" class="delete-button">USUŃ</button>
-        </div>
-    </form>
-</div>
+<!-- Panel Edytora (WERSJA POPRAWIONA I KOMPLETNA) -->
+    <div id="editor-view" class="hidden">
+        <h2>Edytor Artykułów</h2>
+        <form id="editor-form">
+            <!-- Ukryte pole, które przechowuje ID do edycji -->
+            <input type="hidden" id="editor-article-id"> 
+
+            <!-- Pola formularza -->
+            <label>ID (unikalny numer, nie zmieniaj przy edycji):</label>
+            <input type="number" id="editor-id" required>
+
+            <label>Order (kolejność, mniejsza liczba = wyżej):</label>
+            <input type="number" id="editor-order" required>
+            
+            <label>Data:</label>
+            <input type="text" id="editor-date" required>
+            
+            <label>Tytuł:</label>
+            <input type="text" id="editor-title" required>
+            
+            <label>Autor:</label>
+            <input type="text" id="editor-author" required>
+            
+            <label>URL Miniaturki:</label>
+            <input type="text" id="editor-thumbnail" required>
+            
+            <label>
+              <input type="checkbox" id="editor-featured"> Czy wyróżniony w sliderze?
+            </label>
+            
+            <label>Treść (HTML):</label>
+            <textarea id="editor-content" rows="15" required></textarea>
+            
+            <div class="editor-actions">
+                <button type="submit">Zapisz Artykuł</button>
+                <button type="button" id="editor-cancel">Anuluj</button>
+                <button type="button" id="editor-delete" class="delete-button">USUŃ TEN ARTYKUŁ</button>
+            </div>
+        </form>
+    </div>
 <!-- Nowy, zunifikowany Panel Admina -->
 <button id="admin-button">?</button>
 
