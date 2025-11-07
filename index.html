@@ -54,6 +54,25 @@
             </div>
         </div>
     </main>
+    <!-- Panel Edytora (początkowo ukryty) -->
+<div id="editor-view" class="hidden">
+    <h2>Edytor Artykułów</h2>
+    <form id="editor-form">
+        <input type="hidden" id="editor-article-id">
+        <label>Order:</label><input type="number" id="editor-order" required>
+        <label>Tytuł:</label><input type="text" id="editor-title" required>
+        <label>Autor:</label><input type="text" id="editor-author" required>
+        <label>Kategoria:</label><input type="text" id="editor-category">
+        <label>URL Miniaturki:</label><input type="text" id="editor-thumbnail" required>
+        <label>Treść (HTML):</label><textarea id="editor-content" rows="15" required></textarea>
+        <div class="editor-actions">
+            <button type="submit">Zapisz Artykuł</button>
+            <button type="button" id="editor-cancel">Anuluj</button>
+            <button type="button" id="editor-delete" class="delete-button">USUŃ</button>
+        </div>
+    </form>
+</div>
+<button id="admin-login-button">?</button> <!-- Przycisk logowania -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="script.js"></script>
