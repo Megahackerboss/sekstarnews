@@ -72,11 +72,14 @@
         </div>
     </form>
 </div>
-!-- Panel Logowania (początkowo ukryty) -->
-<!-- Nowy, zawsze widoczny przycisk do logowania i dodawania postów -->
+<!-- Nowy, zunifikowany Panel Admina -->
 <button id="admin-button">?</button>
 
-<!-- Panel Logowania (bez zmian) -->
+<div id="admin-menu" class="hidden">
+  <button id="admin-menu-add">Dodaj nowy artykuł</button>
+  <button id="admin-menu-logout">Wyloguj</button>
+</div>
+
 <div id="login-view" class="hidden">
     <div id="login-box">
         <h2>Logowanie Admina</h2>
@@ -85,6 +88,11 @@
         <button id="login-submit">Zaloguj</button>
         <button id="login-cancel">Anuluj</button>
     </div>
+</div>
+
+<!-- Panel Edytora (bez zmian) -->
+<div id="editor-view" class="hidden">
+    <!-- ... cała zawartość formularza edytora ... -->
 </div>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
