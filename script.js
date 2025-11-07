@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // === KONFIGURACJA FIREBASE ===
+    // === 1. KONFIGURACJA FIREBASE ===
     // !!! WKLEJ TUTAJ SWÓJ OBIEKT firebaseConfig Z KONSOLI FIREBASE !!!
     const firebaseConfig = {
   apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
@@ -16,51 +16,61 @@ document.addEventListener('DOMContentLoaded', () => {
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // === ELEMENTY DOM (bez zmian) ===
+    // === 2. ELEMENTY DOM (wszystkie zdefiniowane w jednym miejscu) ===
     const backButton = document.getElementById('back-button');
     const mainView = document.getElementById('main-view');
-    // ... i reszta ...
+    const featuredSliderContainer = document.getElementById('featured-slider-container');
+    const newsListView = document.getElementById('news-list-view'); // <-- BRAKUJĄCA ZMIENNA
+    const articleView = document.getElementById('article-view');
+    const navTitle = document.querySelector('.nav-title');
     const articleContent = document.getElementById('article-content');
+    const articleDate = document.getElementById('article-date');
+    const articleAuthor = document.getElementById('article-author');
     const likeButton = document.getElementById('like-button');
     const likeCountSpan = document.getElementById('like-count');
     const commentForm = document.getElementById('comment-form');
     const commentsList = document.getElementById('comments-list');
-    
+
+    // Zmienne stanu aplikacji
     let allArticles = [];
     let currentArticle = null;
-    let commentsListener = null; // Zmienna do przechowywania nasłuchiwacza
+    let commentsListener = null; 
+    let slideInterval;
+    let currentSlideIndex = 0;
 
-    // --- LOGIKA APLIKACJI ---
+    // --- 3. GŁÓWNA LOGIKA APLIKACJI ---
 
     async function loadArticlesConfig() {
         try {
             const response = await fetch('articles/articles.json');
             allArticles = await response.json();
-            // Reszta logiki budowania UI (slider, lista)
-        } catch (error) { console.error("Błąd ładowania articles.json:", error); }
+        } catch (error) { 
+            console.error("Krytyczny błąd: Nie udało się wczytać articles.json:", error);
+            mainView.innerHTML = "<h1>Błąd ładowania konfiguracji strony.</h1>";
+        }
     }
 
     async function displayArticle(articleId) {
         currentArticle = allArticles.find(a => a.id == articleId);
         if (!currentArticle) return;
         
-        // Odłącz stary nasłuchiwacz komentarzy, jeśli istnieje
         if (commentsListener) commentsListener.off();
 
-        // Wypełnij statyczną treść
+        articleDate.textContent = currentArticle.date;
+        articleAuthor.textContent = `Autor: ${currentArticle.author}`;
         articleContent.innerHTML = currentArticle.content;
-        // ...
-
-        // Przełącz widoki
+        
         mainView.classList.add('hidden');
         articleView.classList.remove('hidden');
+        backButton.classList.remove('hidden');
+        navTitle.style.marginLeft = '0px';
+        clearInterval(slideInterval);
 
-        // POBIERZ DANE Z FIREBASE
         getLikes(articleId);
-        listenForComments(articleId); // Uruchom nasłuchiwanie na komentarze w czasie rzeczywistym
+        listenForComments(articleId);
     }
 
-    // --- FUNKCJE KOMUNIKACJI Z FIREBASE ---
+    // --- 4. FUNKCJE KOMUNIKACJI Z FIREBASE ---
 
     function getLikes(articleId) {
         const likesRef = database.ref(`articles/${articleId}/likes`);
@@ -75,27 +85,26 @@ document.addEventListener('DOMContentLoaded', () => {
         likesRef.set(currentLikes + 1);
     }
     
-    // Ta funkcja jest teraz "żywa" - automatycznie aktualizuje komentarze
     function listenForComments(articleId) {
         commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp');
         commentsListener.on('value', (snapshot) => {
             const commentsData = snapshot.val();
             const comments = commentsData ? Object.values(commentsData) : [];
-            loadComments(comments.reverse()); // Odwracamy, aby najnowsze były na górze
+            loadComments(comments.reverse());
         });
     }
     
     function addComment(author, message) {
         const commentsRef = database.ref(`comments/${currentArticle.id}`);
-        const newCommentRef = commentsRef.push(); // Generuj unikalne ID dla komentarza
+        const newCommentRef = commentsRef.push();
         newCommentRef.set({
             author: author,
             message: message,
-            timestamp: firebase.database.ServerValue.TIMESTAMP // Data po stronie serwera
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
     }
 
-    // --- AKTUALIZACJA INTERFEJSU ---
+    // --- 5. AKTUALIZACJA INTERFEJSU ---
     function updateLikeButton(likes, articleId) {
         likeCountSpan.textContent = likes;
         const alreadyLiked = localStorage.getItem(`liked_${articleId}`) === 'true';
@@ -138,46 +147,104 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const nameInput = document.getElementById('comment-name');
         const messageInput = document.getElementById('comment-message');
-        addComment(nameInput.value, messageInput.value);
-        commentForm.reset();
+        if (nameInput.value && messageInput.value) {
+            addComment(nameInput.value, messageInput.value);
+            commentForm.reset();
+        }
     };
 
-    // --- Inicjalizacja (wklej pełne funkcje z poprzednich odpowiedzi) ---
-    // ...
-    // Poniżej wklejone dla kompletności, bez zmian
+    // --- 6. FUNKCJE UI (slider, lista, nawigacja) ---
+    function showMainView() {
+        articleView.classList.add('hidden');
+        mainView.classList.remove('hidden');
+        backButton.classList.add('hidden');
+        if (backButton.offsetWidth > 0) {
+            navTitle.style.marginLeft = `-${backButton.offsetWidth}px`;
+        }
+        startSlideInterval();
+        currentArticle = null;
+    }
+
+    function displayNewsList(articles) {
+        newsListView.innerHTML = '';
+        articles.forEach(article => {
+            const card = document.createElement('div');
+            card.className = 'article-card';
+            card.dataset.id = article.id;
+            card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`;
+            newsListView.appendChild(card);
+        });
+    }
+
+    function setupFeaturedSlider(articles) {
+        if (articles.length === 0) {
+            featuredSliderContainer.style.display = 'none';
+            return;
+        }
+        featuredSliderContainer.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`;
+        const sliderContent = featuredSliderContainer.querySelector('.slider-content');
+        const sliderNav = featuredSliderContainer.querySelector('.slider-nav');
+        articles.forEach((article, index) => {
+            const slide = document.createElement('div');
+            slide.className = 'slide';
+            slide.dataset.id = article.id;
+            slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`;
+            sliderContent.appendChild(slide);
+            const navDot = document.createElement('span');
+            navDot.className = 'nav-dot';
+            navDot.dataset.index = index;
+            sliderNav.appendChild(navDot);
+        });
+        showSlide(0);
+        startSlideInterval();
+        sliderNav.addEventListener('click', (e) => {
+            if (e.target.classList.contains('nav-dot')) {
+                const index = parseInt(e.target.dataset.index, 10);
+                showSlide(index);
+                resetSlideInterval();
+            }
+        });
+    }
+    
+    function showSlide(index) {
+        const slides = featuredSliderContainer.querySelectorAll('.slide');
+        const dots = featuredSliderContainer.querySelectorAll('.nav-dot');
+        if (index >= slides.length) index = 0;
+        if (index < 0) index = slides.length - 1;
+        slides.forEach(slide => slide.classList.remove('active'));
+        dots.forEach(dot => dot.classList.remove('active'));
+        if (slides[index]) slides[index].classList.add('active');
+        if (dots[index]) dots[index].classList.add('active');
+        currentSlideIndex = index;
+    }
+    
+    function nextSlide() { showSlide(currentSlideIndex + 1); }
+    function startSlideInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 8000); }
+    function resetSlideInterval() { clearInterval(slideInterval); startSlideInterval(); }
+    
+    // --- 7. INICJALIZACJA APLIKACJI ---
     async function init() {
         await loadArticlesConfig();
-        // Reszta kodu inicjalizującego
+        
         const featuredArticles = allArticles.filter(a => a.featured).slice(0, 5);
         displayNewsList(allArticles);
         setupFeaturedSlider(featuredArticles);
 
         backButton.addEventListener('click', () => {
-            if (commentsListener) commentsListener.off(); // Wyłącz nasłuchiwanie przy powrocie
+            if (commentsListener) commentsListener.off();
             showMainView();
         });
-        function handleArticleClick(event) { const targetElement = event.target.closest('[data-id]'); if (targetElement) { displayArticle(targetElement.dataset.id); window.scrollTo(0, 0); } }
+
+        function handleArticleClick(event) {
+            const targetElement = event.target.closest('[data-id]');
+            if (targetElement) {
+                displayArticle(targetElement.dataset.id);
+                window.scrollTo(0, 0);
+            }
+        }
         featuredSliderContainer.addEventListener('click', handleArticleClick);
         newsListView.addEventListener('click', handleArticleClick);
     }
-    function showMainView() { /* ... */ }
-    function setupFeaturedSlider(articles) { /* ... */ }
-    function showSlide(index) { /* ... */ }
-    function nextSlide() { /* ... */ }
-    function startSlideInterval() { /* ... */ }
-    function resetSlideInterval() { /* ... */ }
-    function displayNewsList(articles) { /* ... */ }
 
-    // Uzupełnijmy brakujące funkcje
-    function showMainView() { articleView.classList.add('hidden'); mainView.classList.remove('hidden'); backButton.classList.add('hidden'); navTitle.style.marginLeft = `-${backButton.offsetWidth}px`; startSlideInterval(); currentArticle = null; }
-    function setupFeaturedSlider(articles) { if (articles.length === 0) { featuredSliderContainer.style.display = 'none'; return; } featuredSliderContainer.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`; const sliderContent = featuredSliderContainer.querySelector('.slider-content'); const sliderNav = featuredSliderContainer.querySelector('.slider-nav'); articles.forEach((article, index) => { const slide = document.createElement('div'); slide.className = 'slide'; slide.dataset.id = article.id; slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`; sliderContent.appendChild(slide); const navDot = document.createElement('span'); navDot.className = 'nav-dot'; navDot.dataset.index = index; sliderNav.appendChild(navDot); }); showSlide(0); startSlideInterval(); sliderNav.addEventListener('click', (e) => { if (e.target.classList.contains('nav-dot')) { const index = parseInt(e.target.dataset.index, 10); showSlide(index); resetSlideInterval(); } }); }
-    let currentSlideIndex = 0;
-    function showSlide(index) { const slides = featuredSliderContainer.querySelectorAll('.slide'); const dots = featuredSliderContainer.querySelectorAll('.nav-dot'); if (index >= slides.length) index = 0; if (index < 0) index = slides.length - 1; slides.forEach(slide => slide.classList.remove('active')); dots.forEach(dot => dot.classList.remove('active')); if (slides[index]) slides[index].classList.add('active'); if (dots[index]) dots[index].classList.add('active'); currentSlideIndex = index; }
-    function nextSlide() { showSlide(currentSlideIndex + 1); }
-    let slideInterval;
-    function startSlideInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 8000); }
-    function resetSlideInterval() { clearInterval(slideInterval); startSlideInterval(); }
-    function displayNewsList(articles) { newsListView.innerHTML = ''; articles.forEach(article => { const card = document.createElement('div'); card.className = 'article-card'; card.dataset.id = article.id; card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`; newsListView.appendChild(card); }); }
-    
     init();
 });
