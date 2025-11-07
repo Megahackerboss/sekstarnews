@@ -73,6 +73,10 @@
     </form>
 </div>
 !-- Panel Logowania (początkowo ukryty) -->
+<!-- Nowy, zawsze widoczny przycisk do logowania i dodawania postów -->
+<button id="admin-button">?</button>
+
+<!-- Panel Logowania (bez zmian) -->
 <div id="login-view" class="hidden">
     <div id="login-box">
         <h2>Logowanie Admina</h2>
@@ -82,7 +86,6 @@
         <button id="login-cancel">Anuluj</button>
     </div>
 </div>
-<button id="admin-panel-button" class="hidden">?</button> <!-- Ten przycisk pojawi się po zalogowaniu -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
