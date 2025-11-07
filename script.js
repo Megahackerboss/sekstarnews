@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         const appCheck = firebase.appCheck();
         appCheck.activate(
-            '6Ld...TWOJ_KLUCZ_WITRYNY_RECAPTCHA...CQ', // <-- WKLEJ TUTAJ SWÓJ KLUCZ WITRYNY reCAPTCHA v3
+            '6Le8YAUsAAAAADWQZ1LBpuXJUODLq-n2EIbpq5K1', // <-- WKLEJ TUTAJ SWÓJ KLUCZ WITRYNY reCAPTCHA v3
             true);
     } catch (error) {
         console.error("Błąd inicjalizacji App Check. Upewnij się, że klucz reCAPTCHA jest poprawny.", error);
@@ -126,3 +126,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
