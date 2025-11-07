@@ -231,5 +231,6 @@ body {
 #login-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 3000; display: flex; align-items: center; justify-content: center; }
 #login-box { background-color: #1f3a61; padding: 30px; border-radius: 8px; text-align: center; }
 #login-box input { display: block; width: 250px; padding: 10px; margin: 10px 0; }
-#admin-panel-button { position: fixed; bottom: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; background-color: #ffc107; color: #000; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 1000; }
+#admin-button { position: fixed; bottom: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; background-color: #ffc107; color: #000; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 1000; }
+
 
