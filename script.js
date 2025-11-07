@@ -108,16 +108,51 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    function listenForComments(articleId) { /* ... bez zmian z poprzedniej wersji ... */ }
-    function addComment(author, message) { /* ... bez zmian z poprzedniej wersji ... */ }
-    function loadComments(comments) { /* ... bez zmian z poprzedniej wersji ... */ }
-    commentForm.onsubmit = (e) => { /* ... bez zmian z poprzedniej wersji ... */ };
+    function listenForComments(articleId) {
+        commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp');
+        commentsListener.on('value', (snapshot) => {
+            const commentsData = snapshot.val();
+            const comments = commentsData ? Object.values(commentsData) : [];
+            loadComments(comments.reverse());
+        });
+    }
+    
+    function addComment(author, message) {
+        const commentsRef = database.ref(`comments/${currentArticle.id}`);
+        const newCommentRef = commentsRef.push();
+        newCommentRef.set({ author: author, message: message, timestamp: firebase.database.ServerValue.TIMESTAMP });
+    }
+    
+    function loadComments(comments) {
+        commentsList.innerHTML = '';
+        if (comments.length === 0) {
+            commentsList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
+        } else {
+            comments.forEach(comment => {
+                const commentEl = document.createElement('div');
+                commentEl.className = 'comment';
+                commentEl.innerHTML = `<div class="comment-header"><span class="comment-author">${comment.author || 'Anonim'}</span><span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span></div><p class="comment-message">${comment.message || ''}</p>`;
+                commentsList.appendChild(commentEl);
+            });
+        }
+    }
+    
+    commentForm.onsubmit = (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById('comment-name');
+        const messageInput = document.getElementById('comment-message');
+        if (nameInput.value && messageInput.value) {
+            addComment(nameInput.value, messageInput.value);
+            commentForm.reset();
+        }
+    };
 
-    // === 6. LOGIKA EDYTORA I LOGOWANIA ===
+    // === 6. LOGIKA EDYTORA I LOGOWANIA (NAPRAWIONA I UPROSZCZONA) ===
     function showEditor(article = null) {
         if (!loggedIn) return;
-        if (article) {
-            editorForm.querySelector('#editor-article-id').value = article.id;
+
+        // Wypełnij formularz danymi
+        if (article) { // Edycja istniejącego
             editorForm.querySelector('#editor-id').value = article.id;
             editorForm.querySelector('#editor-order').value = article.order || 99;
             editorForm.querySelector('#editor-date').value = article.date || new Date().toLocaleString();
@@ -127,25 +162,31 @@ document.addEventListener('DOMContentLoaded', () => {
             editorForm.querySelector('#editor-featured').checked = article.featured || false;
             editorForm.querySelector('#editor-content').value = article.content || '';
             editorDeleteButton.classList.remove('hidden');
-        } else {
+        } else { // Tworzenie nowego
             editorForm.reset();
             const newId = Date.now();
-            editorForm.querySelector('#editor-article-id').value = newId;
             editorForm.querySelector('#editor-id').value = newId;
             editorForm.querySelector('#editor-date').value = new Date().toLocaleString();
             editorDeleteButton.classList.add('hidden');
         }
+        
+        // Pokaż panel edytora
         editorView.classList.remove('hidden');
     }
 
     adminLoginButton.addEventListener('click', () => {
-        if (loggedIn) { showEditor(null); return; }
+        if (loggedIn) {
+            showEditor(null); // Jeśli zalogowany, kliknięcie '+' otwiera pusty edytor
+            return;
+        }
         const password = prompt("Podaj hasło administratora:");
-        if (password === "sekstarpremium") { // <-- ZMIEŃ TO HASŁO!
+        if (password === "sekstarpremium") { // <-- PAMIĘTAJ, ABY ZMIENIĆ TO HASŁO!
             loggedIn = true;
-            alert("Zalogowano pomyślnie!");
+            alert("Zalogowano pomyślnie! Teraz możesz klikać na artykuły, aby je edytować, lub na przycisk '+', aby dodać nowy.");
             adminLoginButton.textContent = "+";
-        } else { alert("Nieprawidłowe hasło."); }
+        } else {
+            alert("Nieprawidłowe hasło.");
+        }
     });
 
     editorForm.addEventListener('submit', (e) => {
@@ -162,8 +203,14 @@ document.addEventListener('DOMContentLoaded', () => {
             content: document.getElementById('editor-content').value,
         };
         database.ref(`content/${articleId}`).set(articleData)
-            .then(() => { alert("Artykuł zapisany!"); editorView.classList.add('hidden'); })
-            .catch(err => { console.error(err); alert("Błąd zapisu!"); });
+            .then(() => {
+                alert("Artykuł zapisany!");
+                editorView.classList.add('hidden');
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Błąd zapisu!");
+            });
     });
     
     editorCancelButton.addEventListener('click', () => editorView.classList.add('hidden'));
@@ -172,17 +219,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const articleId = document.getElementById('editor-id').value;
         if (confirm(`Czy na pewno chcesz usunąć artykuł ID: ${articleId}? TEJ OPERACJI NIE MOŻNA COFNĄĆ!`)) {
             database.ref(`content/${articleId}`).remove()
-                .then(() => { alert("Artykuł usunięty."); editorView.classList.add('hidden'); })
-                .catch(err => { console.error(err); alert("Błąd usuwania!"); });
+                .then(() => {
+                    alert("Artykuł usunięty.");
+                    editorView.classList.add('hidden');
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Błąd usuwania!");
+                });
         }
     });
 
     // === 7. FUNKCJE UI (slider, lista, nawigacja) ===
-    // Wklejone pełne wersje z poprzedniej, działającej implementacji
-    function listenForComments(articleId) { commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp'); commentsListener.on('value', (snapshot) => { const commentsData = snapshot.val(); const comments = commentsData ? Object.values(commentsData) : []; loadComments(comments.reverse()); }); }
-    function addComment(author, message) { const commentsRef = database.ref(`comments/${currentArticle.id}`); const newCommentRef = commentsRef.push(); newCommentRef.set({ author: author, message: message, timestamp: firebase.database.ServerValue.TIMESTAMP }); }
-    function loadComments(comments) { commentsList.innerHTML = ''; if (comments.length === 0) { commentsList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>'; } else { comments.forEach(comment => { const commentEl = document.createElement('div'); commentEl.className = 'comment'; commentEl.innerHTML = `<div class="comment-header"><span class="comment-author">${comment.author || 'Anonim'}</span><span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span></div><p class="comment-message">${comment.message || ''}</p>`; commentsList.appendChild(commentEl); }); } }
-    commentForm.onsubmit = (e) => { e.preventDefault(); const nameInput = document.getElementById('comment-name'); const messageInput = document.getElementById('comment-message'); if (nameInput.value && messageInput.value) { addComment(nameInput.value, messageInput.value); commentForm.reset(); } };
     function showMainView() { articleView.classList.add('hidden'); mainView.classList.remove('hidden'); backButton.classList.add('hidden'); if (backButton.offsetWidth > 0) { navTitle.style.marginLeft = `-${backButton.offsetWidth}px`; } startSlideInterval(); currentArticle = null; }
     function displayNewsList(articles) { newsListView.innerHTML = ''; articles.forEach(article => { const card = document.createElement('div'); card.className = 'article-card'; card.dataset.id = article.id; card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`; newsListView.appendChild(card); }); }
     function setupFeaturedSlider(articles) { if (articles.length === 0) { featuredSliderContainer.style.display = 'none'; return; } featuredSliderContainer.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`; const sliderContent = featuredSliderContainer.querySelector('.slider-content'); const sliderNav = featuredSliderContainer.querySelector('.slider-nav'); articles.forEach((article, index) => { const slide = document.createElement('div'); slide.className = 'slide'; slide.dataset.id = article.id; slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`; sliderContent.appendChild(slide); const navDot = document.createElement('span'); navDot.className = 'nav-dot'; navDot.dataset.index = index; sliderNav.appendChild(navDot); }); showSlide(0); startSlideInterval(); sliderNav.addEventListener('click', (e) => { if (e.target.classList.contains('nav-dot')) { const index = parseInt(e.target.dataset.index, 10); showSlide(index); resetSlideInterval(); } }); }
@@ -201,10 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
         function handleArticleClick(event) {
             const targetElement = event.target.closest('[data-id]');
             if (targetElement) {
-                if(loggedIn) { // Jeśli zalogowany, kliknięcie otwiera edytor
+                if (loggedIn) {
                     const articleToEdit = allArticles.find(a => a.id == targetElement.dataset.id);
                     showEditor(articleToEdit);
-                } else { // W przeciwnym razie, otwiera artykuł normalnie
+                } else {
                     displayArticle(targetElement.dataset.id);
                 }
                 window.scrollTo(0, 0);
