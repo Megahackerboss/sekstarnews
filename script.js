@@ -14,14 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
 
     // === 2. INICJALIZACJA APP CHECK (OCHRONA BAZY DANYCH) ===
-    try {
-        const appCheck = firebase.appCheck();
-        appCheck.activate(
-            '6Le8YAUsAAAAADWQZ1LBpuXJUODLq-n2EIbpq5K1', // <-- WKLEJ TUTAJ SWÓJ KLUCZ WITRYNY reCAPTCHA v3
-            true);
-    } catch (error) {
-        console.error("Błąd inicjalizacji App Check. Upewnij się, że klucz reCAPTCHA jest poprawny.", error);
-    }
+    const appCheck = firebase.appCheck();
+    appCheck.activate(
+      '6Le8YAUsAAAAADWQZ1LBpuXJUODLq-n2EIbpq5K1', // <-- WKLEJ POPRAWNY KLUCZ WITRYNY
+      true);
 
     // === 3. ELEMENTY DOM ===
     const backButton = document.getElementById('back-button');
@@ -41,17 +37,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let commentsListener = null;
     let loggedIn = false;
 
-    // === 5. LOGIKA LOGOWANIA I PANELU ADMINA (NAPRAWIONA) ===
+    // === 5. LOGIKA LOGOWANIA I PANELU ADMINA ===
     auth.onAuthStateChanged(user => {
-        loggedIn = !!user; // Ustawia na true jeśli user istnieje, w przeciwnym razie false
-        adminButton.textContent = loggedIn ? "≡" : "?"; // Zmiana ikony
+        loggedIn = !!user;
+        adminButton.textContent = loggedIn ? "≡" : "?";
     });
 
     adminButton.addEventListener('click', () => {
         if (loggedIn) {
-            adminMenu.classList.toggle('hidden'); // Pokaż/ukryj menu admina
+            adminMenu.classList.toggle('hidden');
         } else {
-            loginView.classList.remove('hidden'); // Pokaż panel logowania
+            loginView.classList.remove('hidden');
         }
     });
 
@@ -75,11 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => alert(`Błąd logowania: ${error.message}`));
     });
 
-    // === 6. GŁÓWNA LOGIKA APLIKACJI (bez zmian) ===
-    // Poniżej znajduje się pełny, działający kod z poprzednich iteracji.
-    // Jest kompletny i nie wymaga żadnych modyfikacji.
+    // === 6. GŁÓWNA LOGIKA APLIKACJI ===
     function loadArticlesFromFirebase() { const contentRef = database.ref('content'); contentRef.on('value', (snapshot) => { const data = snapshot.val(); allArticles = data ? Object.values(data) : []; allArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); const featuredArticles = allArticles.filter(a => a.featured).slice(0, 5); displayNewsList(allArticles); setupFeaturedSlider(featuredArticles); }); }
-    function displayArticle(articleId) { currentArticle = allArticles.find(a => a.id == articleId); if (!currentArticle) return; if (commentsListener) commentsListener.off(); const articleDate = document.getElementById('article-date'); const articleAuthor = document.getElementById('article-author'); const articleContent = document.getElementById('article-content'); articleDate.textContent = currentArticle.date; articleAuthor.textContent = `Autor: ${currentArticle.author}`; articleContent.innerHTML = currentArticle.content; mainView.classList.add('hidden'); articleView.classList.remove('hidden'); backButton.classList.remove('hidden'); navTitle.style.marginLeft = '0px'; clearInterval(slideInterval); getLikes(articleId); listenForComments(articleId); }
+    function displayArticle(articleId) { currentArticle = allArticles.find(a => a.id == articleId); if (!currentArticle) return; if (commentsListener) commentsListener.off(); const articleDate = document.getElementById('article-date'); const articleAuthor = document.getElementById('article-author'); const articleContent = document.getElementById('article-content'); articleDate.textContent = currentArticle.date; articleAuthor.textContent = `Autor: ${currentArticle.author}`; articleContent.innerHTML = currentArticle.content; mainView.classList.add('hidden'); articleView.classList.remove('hidden'); backButton.classList.remove('hidden'); const navTitle = document.querySelector('.nav-title'); navTitle.style.marginLeft = '0px'; clearInterval(slideInterval); getLikes(articleId); listenForComments(articleId); }
     function getLikes(articleId) { const likesRef = database.ref(`articles/${articleId}/likes`); likesRef.on('value', (snapshot) => { const likes = snapshot.val() || 0; updateLikeButton(likes, articleId); }); }
     function updateLikeButton(likes, articleId) { const likeButton = document.getElementById('like-button'); const likeCountSpan = document.getElementById('like-count'); likeCountSpan.textContent = likes; const alreadyLiked = localStorage.getItem(`liked_${articleId}`) === 'true'; if (alreadyLiked) { likeButton.classList.add('liked'); likeButton.querySelector('.heart-icon').textContent = '♥'; } else { likeButton.classList.remove('liked'); likeButton.querySelector('.heart-icon').textContent = '♡'; } likeButton.disabled = false; likeButton.onclick = () => { const currentLikesRef = database.ref(`articles/${articleId}/likes`); if (localStorage.getItem(`liked_${articleId}`) === 'true') { localStorage.removeItem(`liked_${articleId}`); currentLikesRef.set(firebase.database.ServerValue.increment(-1)); } else { localStorage.setItem(`liked_${articleId}`, 'true'); currentLikesRef.set(firebase.database.ServerValue.increment(1)); } }; }
     function listenForComments(articleId) { const commentsList = document.getElementById('comments-list'); commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp'); commentsListener.on('value', (snapshot) => { const commentsData = snapshot.val(); const comments = commentsData ? Object.values(commentsData) : []; loadComments(comments.reverse(), commentsList); }); }
@@ -99,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSlideInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 8000); }
     function resetSlideInterval() { clearInterval(slideInterval); startSlideInterval(); }
     
-    // === 8. INICJALIZACJA APLIKACJI ===
+    // === INICJALIZACJA APLIKACJI ===
     function init() {
         backButton.addEventListener('click', () => {
             if (commentsListener) commentsListener.off();
@@ -126,4 +120,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
-
