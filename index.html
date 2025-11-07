@@ -72,7 +72,17 @@
         </div>
     </form>
 </div>
-<button id="admin-login-button">?</button> <!-- Przycisk logowania -->
+!-- Panel Logowania (początkowo ukryty) -->
+<div id="login-view" class="hidden">
+    <div id="login-box">
+        <h2>Logowanie Admina</h2>
+        <input type="email" id="login-email" placeholder="Email">
+        <input type="password" id="login-password" placeholder="Hasło">
+        <button id="login-submit">Zaloguj</button>
+        <button id="login-cancel">Anuluj</button>
+    </div>
+</div>
+<button id="admin-panel-button" class="hidden">?</button> <!-- Ten przycisk pojawi się po zalogowaniu -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="script.js"></script>
