@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         const appCheck = firebase.appCheck();
         appCheck.activate(
-            'TUTAJ_WKLEJ_SWOJ_KLUCZ_WITRYNY_RECAPTCHA_V3', // <-- WKLEJ POPRAWNY KLUCZ WITRYNY
+            '6Le8YAUsAAAAADWQZ1LBpuXJUODLq-n2EIbpq5K1', // <-- WKLEJ POPRAWNY KLUCZ WITRYNY
             true);
     } catch (error) {
         console.error("Błąd inicjalizacji App Check.", error);
@@ -197,3 +197,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
