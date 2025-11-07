@@ -6,10 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
         commentsTableId: "731833"
     };
     const baserowApiUrl = "https://api.baserow.io/api/database/rows/table/";
-    // Używamy darmowego serwera proxy, aby ominąć problem CORS
     const corsProxyUrl = "https://corsproxy.io/?";
 
-    // === ELEMENTY DOM (bez zmian) ===
+    // === ELEMENTY DOM ===
     const backButton = document.getElementById('back-button');
     const mainView = document.getElementById('main-view');
     const featuredSliderContainer = document.getElementById('featured-slider-container');
@@ -30,67 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSlideIndex = 0;
 
     // --- LOGIKA APLIKACJI ---
-    async function loadArticlesConfig() {
-        try {
-            const response = await fetch('articles/articles.json');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            allArticles = await response.json();
-            const featuredArticles = allArticles.filter(a => a.featured).slice(0, 5);
-            displayNewsList(allArticles);
-            setupFeaturedSlider(featuredArticles);
-        } catch (error) {
-            console.error("Krytyczny błąd: Nie udało się wczytać pliku articles.json.", error);
-            mainView.innerHTML = "<h1>Wystąpił błąd ładowania strony. Spróbuj odświeżyć.</h1>";
-        }
-    }
+    async function loadArticlesConfig() { /* ... bez zmian ... */ }
+    async function displayArticle(articleId) { /* ... bez zmian ... */ }
     
-    async function displayArticle(articleId) {
-        currentArticle = allArticles.find(a => a.id == articleId);
-        if (!currentArticle) return;
-
-        articleDate.textContent = currentArticle.date;
-        articleAuthor.textContent = `Autor: ${currentArticle.author}`;
-        articleContent.innerHTML = currentArticle.content;
-        
-        mainView.classList.add('hidden');
-        articleView.classList.remove('hidden');
-        backButton.classList.remove('hidden');
-        navTitle.style.marginLeft = '0px';
-        clearInterval(slideInterval);
-        
-        likeCountSpan.textContent = '...';
-        likeButton.disabled = true;
-        commentsList.innerHTML = '<p>Ładowanie komentarzy...</p>';
-        
-        try {
-            const [likesData, commentsData] = await Promise.all([
-                getLikes(articleId),
-                getComments(articleId)
-            ]);
-            updateLikeButton(likesData.likes, likesData.row_id);
-            loadComments(commentsData);
-        } catch (error) {
-            console.error("Błąd pobierania danych z Baserow:", error);
-            likeCountSpan.textContent = 'Błąd';
-            commentsList.innerHTML = '<p>Nie udało się załadować komentarzy.</p>';
-        }
-    }
-    
-    // --- NOWE FUNKCJE KOMUNIKACJI Z BASEROW PRZEZ PROXY ---
+    // --- FUNKCJE KOMUNIKACJI Z BASEROW PRZEZ PROXY ---
     
     async function fetchData(url, options = {}) {
-        // Dodajemy nagłówek autoryzacji do opcji zapytania
-        const fetchOptions = {
-            ...options,
-            headers: {
-                ...options.headers,
-                'Authorization': `Token ${baserowConfig.apiToken}`
-            }
-        };
-        
-        // Całe zapytanie (URL + opcje) jest wysyłane przez pośrednika
-        const response = await fetch(corsProxyUrl + url, fetchOptions);
-
+        const fetchOptions = { ...options, headers: { ...options.headers, 'Authorization': `Token ${baserowConfig.apiToken}` } };
+        const response = await fetch(corsProxyUrl + encodeURIComponent(url), fetchOptions);
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Błąd odpowiedzi API Baserow przez proxy:', errorText);
@@ -103,56 +49,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = `${baserowApiUrl}${baserowConfig.articlesTableId}/?user_field_names=true&filter__article_id__equal=${articleId}`;
         const data = await fetchData(url);
         const articleData = data.results[0];
-        return {
-            likes: articleData ? articleData.likes : 0,
-            row_id: articleData ? articleData.id : null
-        };
+        return { likes: articleData ? articleData.likes : 0, row_id: articleData ? articleData.id : null };
     }
 
     async function getComments(articleId) {
-        const url = `${baserowApiUrl}${baserowConfig.commentsTableId}/?user_field_names=true&filter__article_id__equal=${articleId}&order_by=-id`;
+        // TA LINIA ZOSTAŁA POPRAWIONA
+        const url = `${baserowApiUrl}${baserowConfig.commentsTableId}/?user_field_names=true&filter__article_id__equal=${articleId}&order_by=-Created%20on`;
         const data = await fetchData(url);
         return data.results;
     }
     
-    async function addLike(currentLikes, rowId) {
-        if (!rowId) throw new Error("Błąd: Brak tego artykułu w bazie Baserow.");
-        const url = `${baserowApiUrl}${baserowConfig.articlesTableId}/${rowId}/?user_field_names=true`;
-        const newLikes = currentLikes + 1;
-        const options = {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ "likes": newLikes })
-        };
-        const data = await fetchData(url, options);
-        return data.likes;
-    }
+    async function addLike(currentLikes, rowId) { /* ... bez zmian ... */ }
+    async function addComment(author, message) { /* ... bez zmian ... */ }
 
-    async function addComment(author, message) {
-        const url = `${baserowApiUrl}${baserowConfig.commentsTableId}/?user_field_names=true`;
-        const options = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ "article_id": currentArticle.id, "author": author, "message": message })
-        };
-        const response = await fetch(corsProxyUrl + url, options); // Niestety, `fetchData` nie obsługuje poprawnie odpowiedzi bez JSON
-        return response.ok;
-    }
-
-    // --- Reszta kodu (bez zmian, wklejona dla kompletności) ---
-    function updateLikeButton(likes, rowId) { /* ... bez zmian ... */ }
-    function loadComments(comments) { /* ... bez zmian ... */ }
-    commentForm.onsubmit = async (e) => { /* ... bez zmian ... */ };
-    function showMainView() { /* ... bez zmian ... */ }
-    function setupFeaturedSlider(articles) { /* ... bez zmian ... */ }
-    function showSlide(index) { /* ... bez zmian ... */ }
-    function nextSlide() { /* ... bez zmian ... */ }
-    function startSlideInterval() { /* ... bez zmian ... */ }
-    function resetSlideInterval() { /* ... bez zmian ... */ }
-    function displayNewsList(articles) { /* ... bez zmian ... */ }
-    function init() { /* ... bez zmian ... */ }
-
-    // Wklej pełne wersje tych funkcji z poprzedniej odpowiedzi
+    // --- Pozostałe funkcje (wklejone dla kompletności) ---
+    async function loadArticlesConfig() { try { const response = await fetch('articles/articles.json'); if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`); allArticles = await response.json(); const featuredArticles = allArticles.filter(a => a.featured).slice(0, 5); displayNewsList(allArticles); setupFeaturedSlider(featuredArticles); } catch (error) { console.error("Krytyczny błąd: Nie udało się wczytać pliku articles.json.", error); mainView.innerHTML = "<h1>Wystąpił błąd ładowania strony. Spróbuj odświeżyć.</h1>"; } }
+    async function displayArticle(articleId) { currentArticle = allArticles.find(a => a.id == articleId); if (!currentArticle) return; articleDate.textContent = currentArticle.date; articleAuthor.textContent = `Autor: ${currentArticle.author}`; articleContent.innerHTML = currentArticle.content; mainView.classList.add('hidden'); articleView.classList.remove('hidden'); backButton.classList.remove('hidden'); navTitle.style.marginLeft = '0px'; clearInterval(slideInterval); likeCountSpan.textContent = '...'; likeButton.disabled = true; commentsList.innerHTML = '<p>Ładowanie komentarzy...</p>'; try { const [likesData, commentsData] = await Promise.all([ getLikes(articleId), getComments(articleId) ]); updateLikeButton(likesData.likes, likesData.row_id); loadComments(commentsData); } catch (error) { console.error("Błąd pobierania danych z Baserow:", error); likeCountSpan.textContent = 'Błąd'; commentsList.innerHTML = '<p>Nie udało się załadować komentarzy.</p>'; } }
+    async function addLike(currentLikes, rowId) { if (!rowId) throw new Error("Błąd: Brak tego artykułu w bazie Baserow."); const url = `${baserowApiUrl}${baserowConfig.articlesTableId}/${rowId}/?user_field_names=true`; const newLikes = currentLikes + 1; const options = { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ "likes": newLikes }) }; const data = await fetchData(url, options); return data.likes; }
+    async function addComment(author, message) { const url = `${baserowApiUrl}${baserowConfig.commentsTableId}/?user_field_names=true`; const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ "article_id": currentArticle.id, "author": author, "message": message }) }; const response = await fetch(corsProxyUrl + encodeURIComponent(url), { ...options, headers: { ...options.headers, Authorization: `Token ${baserowConfig.apiToken}` } }); return response.ok; }
     function updateLikeButton(likes, rowId) { likeCountSpan.textContent = likes; likeButton.disabled = false; const alreadyLiked = localStorage.getItem(`liked_${currentArticle.id}`) === 'true'; if (alreadyLiked) { likeButton.classList.add('liked'); likeButton.querySelector('.heart-icon').textContent = '♥'; likeButton.disabled = true; } else { likeButton.classList.remove('liked'); likeButton.querySelector('.heart-icon').textContent = '♡'; likeButton.onclick = async () => { likeButton.disabled = true; try { const newLikes = await addLike(likes, rowId); localStorage.setItem(`liked_${currentArticle.id}`, 'true'); updateLikeButton(newLikes, rowId); } catch (error) { console.error("Nie udało się zaktualizować polubienia:", error); alert("Wystąpił błąd sieci. Spróbuj ponownie."); likeButton.disabled = false; } }; } }
     function loadComments(comments) { commentsList.innerHTML = ''; if (comments.length === 0) { commentsList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>'; return; } comments.forEach(comment => { const commentEl = document.createElement('div'); commentEl.className = 'comment'; commentEl.innerHTML = `<div class="comment-header"><span class="comment-author">${comment.author || 'Anonim'}</span><span class="comment-date">${new Date(comment['Created on']).toLocaleString()}</span></div><p class="comment-message">${comment.message || ''}</p>`; commentsList.appendChild(commentEl); }); }
     commentForm.onsubmit = async (e) => { e.preventDefault(); const nameInput = document.getElementById('comment-name'); const messageInput = document.getElementById('comment-message'); const submitButton = commentForm.querySelector('button'); submitButton.disabled = true; submitButton.textContent = 'Wysyłanie...'; try { const success = await addComment(nameInput.value, messageInput.value); if (success) { commentForm.reset(); const commentsData = await getComments(currentArticle.id); loadComments(commentsData); } else { alert("Nie udało się dodać komentarza. Spróbuj ponownie."); } } catch (error) { console.error(error); alert("Wystąpił błąd sieci. Spróbuj ponownie."); } finally { submitButton.disabled = false; submitButton.textContent = 'Dodaj komentarz'; } };
