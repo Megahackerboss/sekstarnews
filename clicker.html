@@ -79,7 +79,7 @@
         
         <input id="nickname-input" placeholder="Wpisz swój nick">
         <button id="set-nickname-btn">Ustaw</button>
-        <button id="reset-btn">Resetuj</button>
+        
     
         
         <h4>Ranking Top 10</h4>
@@ -329,9 +329,7 @@
             }
         };
         
-        D.getElementById('reset-btn').onclick = () => {
-            if (confirm('Na pewno? Utracisz WSZYSTKO.')) { if (autoclickerInterval) clearInterval(autoclickerInterval); localStorage.removeItem('clickerGameSave'); window.location.reload(); }
-        };
+       
 
         D.getElementById('set-nickname-btn').onclick = () => {
             const nick = D.getElementById('nickname-input').value.trim();
