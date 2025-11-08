@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === 5. GŁÓWNA LOGIKA APLIKACJI ===
     function loadArticlesFromFirebase() { const contentRef = database.ref('content'); contentRef.on('value', (snapshot) => { const data = snapshot.val(); allArticles = data ? Object.values(data) : []; allArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); const featuredArticles = allArticles.filter(a => a.featured).slice(0, 5); displayNewsList(allArticles); setupFeaturedSlider(featuredArticles); }); }
-    function displayArticle(articleId) { currentArticle = allArticles.find(a => a.id == articleId); if (!currentArticle) return; if (commentsListener) commentsListener.off(); const articleDate = document.getElementById('article-date'); const articleAuthor = document.getElementById('article-author'); const articleContent = document.getElementById('article-content'); articleDate.textContent = currentArticle.date; articleAuthor.textContent = `Autor: ${currentArticle.author}`; articleContent.innerHTML = currentArticle.content; mainView.classList.add('hidden'); articleView.classList.remove('hidden'); backButton.classList.remove('hidden'); navTitle.style.marginLeft = '0px'; clearInterval(slideInterval); getLikes(articleId); listenForComments(articleId); }
+    function displayArticle(articleId) { currentArticle = allArticles.find(a => a.id == articleId); if (!currentArticle) return; if (commentsListener) commentsListener.off(); const articleDate = document.getElementById('article-date'); const articleAuthor = document.getElementById('article-author'); const articleContent = document.getElementById('article-content'); articleDate.textContent = currentArticle.date; articleAuthor.textContent = `Autor: ${currentArticle.author}`; articleContent.innerHTML = currentArticle.content; mainView.classList.add('hidden'); articleView.classList.remove('hidden'); backButton.classList.remove('hidden'); navTitle.style.marginLeft = '0px'; clearInterval(slideInterval); getLikes(articleId); listenForComments(articleId);setupShareButton(currentArticle); }
     function getLikes(articleId) { const likesRef = database.ref(`articles/${articleId}/likes`); likesRef.on('value', (snapshot) => { const likes = snapshot.val() || 0; updateLikeButton(likes, articleId); }); }
     function updateLikeButton(likes, articleId) { const likeButton = document.getElementById('like-button'); const likeCountSpan = document.getElementById('like-count'); likeCountSpan.textContent = likes; const alreadyLiked = localStorage.getItem(`liked_${articleId}`) === 'true'; if (alreadyLiked) { likeButton.classList.add('liked'); likeButton.querySelector('.heart-icon').textContent = '♥'; } else { likeButton.classList.remove('liked'); likeButton.querySelector('.heart-icon').textContent = '♡'; } likeButton.disabled = false; likeButton.onclick = () => { const currentLikesRef = database.ref(`articles/${articleId}/likes`); if (localStorage.getItem(`liked_${articleId}`) === 'true') { localStorage.removeItem(`liked_${articleId}`); currentLikesRef.set(firebase.database.ServerValue.increment(-1)); } else { localStorage.setItem(`liked_${articleId}`, 'true'); currentLikesRef.set(firebase.database.ServerValue.increment(1)); } }; }
     function listenForComments(articleId) { const commentsList = document.getElementById('comments-list'); commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp'); commentsListener.on('value', (snapshot) => { const commentsData = snapshot.val(); const comments = commentsData ? Object.values(commentsData) : []; loadComments(comments.reverse(), commentsList); }); }
@@ -111,3 +111,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+// DODAJ TE DWIE FUNKCJE
+
+// Twoja stara, działająca funkcja udostępniania
+function setupShareButton(article) {
+    const shareButton = document.getElementById('share-button');
+    shareButton.onclick = async () => {
+        const shareData = {
+            title: article.title,
+            text: `Sprawdź ten artykuł: ${article.title}`,
+            url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareData.url);
+                alert('Link do artykułu skopiowany do schowka!');
+            } else {
+                throw new Error('APIs not supported');
+            }
+        } catch (err) {
+            console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
+            window.prompt("Skopiuj ten link ręcznie:", shareData.url);
+        }
+    };
+}
+
+// Nowa funkcja do otwierania artykułów z linku
+function handleDeepLink() {
+    const hash = window.location.hash; // Pobiera np. #article-4
+    if (hash && hash.startsWith('#article-')) {
+        const articleId = hash.substring(9); // Wyciąga samo "4"
+        // Poczekaj chwilę, aż artykuły się załadują z Firebase
+        setTimeout(() => {
+            if (articleId && allArticles.some(a => a.id == articleId)) {
+                displayArticle(articleId);
+            }
+        }, 500); // 0.5s opóźnienia powinno wystarczyć
+    }
+}
