@@ -129,4 +129,60 @@
             if (gameState.cookies >= gameState.upgradeCost) {
                 gameState.cookies -= gameState.upgradeCost;
                 gameState.upgradeLevel++;
-                gameState.u
+                gameState.upgradeCost *= 1.18;
+                updateUI();
+            }
+        };
+        
+        D.getElementById('prestige-btn').onclick = () => {
+            if (gameState.cookies >= gameState.prestigeCost) {
+                gameState.prestigePoints++;
+                gameState.cookies = 0;
+                gameState.upgradeLevel = 0;
+                gameState.upgradeCost = 10;
+                gameState.prestigeCost *= 1.15;
+                updateUI();
+            }
+        };
+        
+        D.getElementById('prestige-upgrade-1').onclick = () => {
+            const cost = gameState.prestigeUpgradeLevel1 + 1;
+            if (gameState.prestigePoints >= cost) {
+                gameState.prestigePoints -= cost;
+                gameState.prestigeUpgradeLevel1++;
+                updateUI();
+            }
+        };
+        
+        D.getElementById('set-nickname-btn').onclick = () => {
+            const nick = D.getElementById('nickname-input').value.trim();
+            if (nick) gameState.nickname = nick;
+            saveGame();
+        };
+
+        D.getElementById('reset-btn').onclick = () => {
+            if (confirm('Czy na pewno chcesz zresetować cały postęp?')) {
+                localStorage.removeItem('clickerGameSave');
+                window.location.reload();
+            }
+        };
+
+        // === FIREBASE LEADERBOARD ===
+        database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => {
+            const list = D.getElementById('leaderboard-list');
+            list.innerHTML = '';
+            const scores = [];
+            snapshot.forEach(child => { scores.push(child.val()) });
+            scores.reverse().forEach(player => {
+                const li = D.createElement('li');
+                li.textContent = `${player.nn}: ${f(player.c)}`;
+                list.appendChild(li);
+            });
+        });
+
+        // === START GRY ===
+        loadGame();
+        setInterval(saveGame, 5000);
+    </script>
+</body>
+</html>
