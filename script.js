@@ -88,30 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function nextSlide() { showSlide(currentSlideIndex + 1); }
     function startSlideInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 8000); }
     function resetSlideInterval() { clearInterval(slideInterval); startSlideInterval(); }
-    
-    // === 8. INICJALIZACJA APLIKACJI ===
-    function init() {
-        backButton.addEventListener('click', () => { if (commentsListener) commentsListener.off(); showMainView(); });
-        function handleArticleClick(event) {
-            const targetElement = event.target.closest('[data-id]');
-            if (targetElement) {
-                if (loggedIn) {
-                    const articleToEdit = allArticles.find(a => a.id == targetElement.dataset.id);
-                    showEditor(articleToEdit);
-                } else {
-                    displayArticle(targetElement.dataset.id);
-                }
-                window.scrollTo(0, 0);
-            }
-        }
-        featuredSliderContainer.addEventListener('click', handleArticleClick);
-        newsListView.addEventListener('click', handleArticleClick);
-        loadArticlesFromFirebase();
-    }
 
-    init();
-});
-// DODAJ TE DWIE FUNKCJE
+    // DODAJ TE DWIE FUNKCJE
 
 // Twoja stara, działająca funkcja udostępniania
 function setupShareButton(article) {
@@ -151,3 +129,31 @@ function handleDeepLink() {
         }, 500); // 0.5s opóźnienia powinno wystarczyć
     }
 }
+    
+    // === 8. INICJALIZACJA APLIKACJI ===
+    function init() {
+        backButton.addEventListener('click', () => { if (commentsListener) commentsListener.off(); showMainView(); });
+        function handleArticleClick(event) {
+            const targetElement = event.target.closest('[data-id]');
+            if (targetElement) {
+                if (loggedIn) {
+                    const articleToEdit = allArticles.find(a => a.id == targetElement.dataset.id);
+                    showEditor(articleToEdit);
+                } else {
+                    displayArticle(targetElement.dataset.id);
+                }
+                window.scrollTo(0, 0);
+            }
+        }
+        featuredSliderContainer.addEventListener('click', handleArticleClick);
+        newsListView.addEventListener('click', handleArticleClick);
+        loadArticlesFromFirebase();
+        handleDeepLink(); // <-- DODAJ TĘ LINIĘ
+    }
+
+    init();
+
+
+});
+
+
