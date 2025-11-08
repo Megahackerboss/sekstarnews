@@ -197,10 +197,11 @@
             let pcdCost = 1 + (gameState.prestigeCritDamageLevel * 2);
             pcdBtn.textContent = `+2% bonusu krytyka (Poziom: ${gameState.prestigeCritDamageLevel}) Koszt: ${formatNumber(pcdCost)} PP`;
             
-            D.getElementById('prestige-section').style.display = gameState.cookies >= gameState.prestigeCost || gameState.prestigePoints > 0 ? 'block' : 'none';
+            const hasPrestiged = Object.keys(gameState.prestigeUpgrades).length > 0;
+            D.getElementById('prestige-section').style.display = gameState.cookies >= gameState.prestigeCost || hasPrestiged ? 'block' : 'none';
             D.getElementById('prestige-points').textContent = formatNumber(gameState.prestigePoints);
             D.getElementById('prestige-btn').textContent = `Prestiż (Koszt: ${formatNumber(gameState.prestigeCost)})`;
-            D.getElementById('prestige-tree').style.display = gameState.prestigePoints > 0 || Object.keys(gameState.prestigeUpgrades).length > 0 ? 'grid' : 'none';
+            D.getElementById('prestige-tree').style.display = hasPrestiged ? 'grid' : 'none';
             
             document.querySelectorAll('.pt-node').forEach(btn => {
                 const id = btn.dataset.id; const node = prestigeTree[id]; if (!node) return;
@@ -259,16 +260,29 @@
 
         D.getElementById('cookie-btn').onclick = () => handleCookieClick();
         
+        // --- POPRAWIONA FORMUŁA KOSZTU ---
         D.getElementById('upgrade1-btn').onclick = () => {
             if (gameState.cookies >= gameState.upgrade1Cost) {
                 gameState.cookies -= gameState.upgrade1Cost;
-                let costFalloff = 1; if(getPU('center')) costFalloff = 1.05; if(getPU('b2_2')) costFalloff = 1.1; if(getPU('b2_3')) costFalloff = 1.12; if(getPU('b2_4')) costFalloff = 1.13; costFalloff += (getPU('b2_5_level') || 0) * 0.00004;
-                let multiplier = 1 + (0.1 * Math.pow(1 / costFalloff, gameState.upgrade1Level));
+                
+                // Obliczanie współczynnika zaniku na podstawie ulepszeń prestiżowych
+                let decayRate = 0.01; // Domyślnie 1%
+                if (getPU('center')) decayRate = 0.0105; // 1.05%
+                if (getPU('b2_2')) decayRate = 0.011;   // 1.1%
+                if (getPU('b2_3')) decayRate = 0.0112;  // 1.12%
+                if (getPU('b2_4')) decayRate = 0.0113;  // 1.13%
+                decayRate += (getPU('b2_5_level') || 0) * 0.00004; // Nieskończone ulepszenie +0.004%
+                
+                const decayBase = 1 - decayRate;
+                const multiplier = 1 + (0.1 * Math.pow(decayBase, gameState.upgrade1Level));
+                
                 gameState.upgrade1Cost *= multiplier;
                 gameState.upgrade1Level++;
                 updateUI();
             }
         };
+        // --- KONIEC POPRAWKI ---
+
         D.getElementById('upgrade2-btn').onclick = () => {
             if (gameState.cookies >= gameState.upgrade2Cost) {
                 gameState.cookies -= gameState.upgrade2Cost;
