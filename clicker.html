@@ -52,27 +52,22 @@
             <button id="prestige-btn"></button>
 
             <div id="prestige-tree" style="display: none; margin-top: 15px;">
-                <!-- Center -->
                 <button id="pt-center" class="pt-node" data-id="center" title="Lepsze skalowanie ulepszeń (Koszt: 1 PP)">Start</button>
-                <!-- Branch 1 -->
                 <button id="pt-b1-1" class="pt-node" data-id="b1_1" title="Odblokuj Ulepszenie 2 (Koszt: 1 PP)">B1.1</button>
                 <button id="pt-b1-2" class="pt-node" data-id="b1_2" title="Ulepszenie 2 daje 1.5% bonusu (Koszt: 2 PP)">B1.2</button>
                 <button id="pt-b1-3" class="pt-node" data-id="b1_3" title="Odblokuj Ulepszenie 3 (Koszt: 3 PP)">B1.3</button>
                 <button id="pt-b1-4" class="pt-node" data-id="b1_4" title="Ulepszenie 3 jest lepsze (Koszt: 7 PP)">B1.4</button>
                 <button id="pt-b1-5" class="pt-node" data-id="b1_5" title="Nieskończone ulepszenie gałęzi 1">B1.INF</button>
-                <!-- Branch 2 -->
                 <button id="pt-b2-1" class="pt-node" data-id="b2_1" title="Bonus co 100 ulepszeń (Koszt: 3 PP)">B2.1</button>
                 <button id="pt-b2-2" class="pt-node" data-id="b2_2" title="Spadek wzrostu ceny (Koszt: 4 PP)">B2.2</button>
                 <button id="pt-b2-3" class="pt-node" data-id="b2_3" title="Spadek wzrostu ceny (Koszt: 6 PP)">B2.3</button>
                 <button id="pt-b2-4" class="pt-node" data-id="b2_4" title="Spadek wzrostu ceny (Koszt: 8 PP)">B2.4</button>
                 <button id="pt-b2-5" class="pt-node" data-id="b2_5" title="Nieskończony spadek wzrostu ceny">B2.INF</button>
-                <!-- Branch 3 -->
                 <button id="pt-b3-1" class="pt-node" data-id="b3_1" title="Odblokuj trwały Auto-Clicker (Koszt: 1 PP)">B3.1</button>
                 <button id="pt-b3-2" class="pt-node" data-id="b3_2" title="Auto-Clicker +15% szybciej (Koszt: 2 PP)">B3.2</button>
                 <button id="pt-b3-3" class="pt-node" data-id="b3_3" title="Auto-Clicker +25% szybciej (Koszt: 4 PP)">B3.3</button>
                 <button id="pt-b3-4" class="pt-node" data-id="b3_4" title="Auto-Clicker wpływa na krytyki (Koszt: 6 PP)">B3.4</button>
                 <button id="pt-b3-5" class="pt-node" data-id="b3_5" title="Nieskończona szybkość Auto-Clickera">B3.INF</button>
-                <!-- Branch 4 -->
                 <button id="pt-b4-1" class="pt-node" data-id="b4_1" title="Odblokuj Trafienia Krytyczne (Koszt: 1 PP)">B4.1</button>
                 <button id="pt-b4-2" class="pt-node" data-id="b4_2" title="Odblokuj trwałe ulepszenie szansy na krytyk (Koszt: 2 PP)">B4.2</button>
                 <button id="pt-b4-3" class="pt-node" data-id="b4_3" title="Odblokuj trwałe ulepszenie bonusu krytyka (Koszt: 4 PP)">B4.3</button>
@@ -90,17 +85,16 @@
         <div id="leaderboard"> <ol id="leaderboard-list"></ol> </div>
     </div>
     
-    <!-- POPRAWIONA KOLEJNOŚĆ SKRYPTÓW -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     <script>
     window.addEventListener('DOMContentLoaded', () => {
 
         const firebaseConfig = {
-            apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
-            authDomain: "sekstarnews.firebaseapp.com",
-            databaseURL: "https://sekstarnews-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "sekstarnews"
+        apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
+        authDomain: "sekstarnews.firebaseapp.com",
+        databaseURL: "https://sekstarnews-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "sekstarnews"
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -211,7 +205,7 @@
             document.querySelectorAll('.pt-node').forEach(btn => {
                 const id = btn.dataset.id; const node = prestigeTree[id]; if (!node) return;
                 let cost = node.cost; if (node.infinite) { cost += (getPU(id + '_level') || 0) * node.costIncrease; }
-                btn.disabled = true; btn.classList.remove('unlocked');
+                btn.disabled = true; btn.classList.remove('unlocked', 'purchased');
                 if(getPU(id) && !node.infinite) { btn.classList.add('purchased'); } else if (node.infinite) { btn.classList.remove('purchased'); }
                 let canUnlock = id === 'center' || Object.keys(prestigeTree).some(p_id => prestigeTree[p_id].unlocks?.includes(id) && getPU(p_id));
                 if (canUnlock && !(getPU(id) && !node.infinite)) {
@@ -255,3 +249,96 @@
         const purchasePrestigeUpgrade = (id) => {
             const node = prestigeTree[id]; const isInfinite = node.infinite; const levelKey = id + '_level'; let cost = node.cost;
             if (isInfinite) { cost += (getPU(levelKey) || 0) * node.costIncrease; }
+            if (gameState.prestigePoints >= cost) {
+                gameState.prestigePoints -= cost;
+                if (isInfinite) { gameState.prestigeUpgrades[levelKey] = (getPU(levelKey) || 0) + 1; } 
+                else { gameState.prestigeUpgrades[id] = 1; }
+                updateUI();
+            }
+        };
+
+        D.getElementById('cookie-btn').onclick = () => handleCookieClick();
+        
+        D.getElementById('upgrade1-btn').onclick = () => {
+            if (gameState.cookies >= gameState.upgrade1Cost) {
+                gameState.cookies -= gameState.upgrade1Cost;
+                let costFalloff = 1; if(getPU('center')) costFalloff = 1.05; if(getPU('b2_2')) costFalloff = 1.1; if(getPU('b2_3')) costFalloff = 1.12; if(getPU('b2_4')) costFalloff = 1.13; costFalloff += (getPU('b2_5_level') || 0) * 0.00004;
+                let multiplier = 1 + (0.1 * Math.pow(1 / costFalloff, gameState.upgrade1Level));
+                gameState.upgrade1Cost *= multiplier;
+                gameState.upgrade1Level++;
+                updateUI();
+            }
+        };
+        D.getElementById('upgrade2-btn').onclick = () => {
+            if (gameState.cookies >= gameState.upgrade2Cost) {
+                gameState.cookies -= gameState.upgrade2Cost;
+                let costMultiplier = getPU('b1_2') ? 5 : 10;
+                gameState.upgrade2Cost *= costMultiplier;
+                gameState.upgrade2Level++;
+                updateUI();
+            }
+        };
+        D.getElementById('upgrade3-btn').onclick = () => {
+            if (gameState.cookies >= gameState.upgrade3Cost) {
+                gameState.cookies -= gameState.upgrade3Cost;
+                let costMultiplier = getPU('b1_4') ? 7 : 8;
+                costMultiplier -= (getPU('b1_5_level') || 0) * 0.1;
+                gameState.upgrade3Cost *= Math.max(1.1, costMultiplier);
+                gameState.upgrade3Level++;
+                updateUI();
+            }
+        };
+        
+        D.getElementById('prestige-autoclicker-btn').onclick = () => {
+            let cost = 1 + (gameState.prestigeAutoclickerLevel * 2);
+            if (gameState.prestigePoints >= cost) { gameState.prestigePoints -= cost; gameState.prestigeAutoclickerLevel++; setupAutoclicker(); updateUI(); }
+        };
+        D.getElementById('prestige-crit-chance-btn').onclick = () => {
+            let cost = 1 + (gameState.prestigeCritChanceLevel * 2);
+            if (gameState.prestigePoints >= cost) { gameState.prestigePoints -= cost; gameState.prestigeCritChanceLevel++; updateUI(); }
+        };
+        D.getElementById('prestige-crit-damage-btn').onclick = () => {
+            let cost = 1 + (gameState.prestigeCritDamageLevel * 2);
+            if (gameState.prestigePoints >= cost) { gameState.prestigePoints -= cost; gameState.prestigeCritDamageLevel++; updateUI(); }
+        };
+
+        document.querySelectorAll('.pt-node').forEach(btn => btn.onclick = () => purchasePrestigeUpgrade(btn.dataset.id));
+        
+        D.getElementById('prestige-btn').onclick = () => {
+            if (gameState.cookies >= gameState.prestigeCost) {
+                gameState.prestigePoints++;
+                const persistentState = { prestigePoints: gameState.prestigePoints, prestigeUpgrades: gameState.prestigeUpgrades, prestigeAutoclickerLevel: gameState.prestigeAutoclickerLevel, prestigeCritChanceLevel: gameState.prestigeCritChanceLevel, prestigeCritDamageLevel: gameState.prestigeCritDamageLevel, nickname: gameState.nickname };
+                gameState = { ...defaultState, ...persistentState };
+                gameState.prestigeCost *= 1.20;
+                setupAutoclicker(); updateUI();
+            }
+        };
+        
+        D.getElementById('reset-btn').onclick = () => {
+            if (confirm('Na pewno? Utracisz WSZYSTKO.')) { if (autoclickerInterval) clearInterval(autoclickerInterval); localStorage.removeItem('clickerGameSave'); window.location.reload(); }
+        };
+
+        D.getElementById('set-nickname-btn').onclick = () => {
+            const nick = D.getElementById('nickname-input').value.trim();
+            if (nick) gameState.nickname = nick; saveGame();
+        };
+        
+        const updateLeaderboard = () => {
+            if (gameState.nickname && gameState.nickname !== 'Anonim') {
+                const safeNickname = gameState.nickname.replace(/[.#$\[\]]/g, '_');
+                database.ref('leaderboard/' + safeNickname).set({ nn: gameState.nickname, c: Math.floor(gameState.cookies || 0) });
+            }
+        };
+        database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => {
+            const list = D.getElementById('leaderboard-list'); list.innerHTML = ''; const scores = [];
+            snapshot.forEach(child => { scores.push(child.val()) });
+            scores.reverse().forEach(player => { const li = D.createElement('li'); li.textContent = `${player.nn}: ${formatNumber(player.c)}`; list.appendChild(li); });
+        });
+
+        loadGame();
+        setInterval(saveGame, 5000);
+        setInterval(updateLeaderboard, 30000);
+    });
+    </script>
+</body>
+</html>
