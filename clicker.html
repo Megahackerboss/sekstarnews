@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Cookie Clicker</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; margin: 0; padding: 15px; background-color: #f7f7f7; color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; margin: 0; padding: 15px; background-color: #f7f7f7; color: #333; user-select: none; }
         #cookie-btn { background: url(https://i.ibb.co/RKxrz7P/proxy-image.png) center/cover; width: 150px; height: 150px; border: none; cursor: pointer; border-radius: 50%; transition: transform 0.1s; display: block; margin: 10px auto; }
         #cookie-btn:active { transform: scale(0.95); }
         button { cursor: pointer; padding: 10px 15px; font-size: 1em; border-radius: 5px; border: 1px solid #ccc; background-color: #e9e9e9; margin: 5px; }
@@ -17,7 +17,7 @@
 </head>
 <body>
 
-    <button id="cookie-btn"></button>
+    <button id="cookie-btn" oncontextmenu="return false;"></button>
     <h3>Ciasteczka: <span id="score">0</span></h3>
     <p style="margin: 5px 0 10px;">Łącznie za klik: <span id="cpc-display">1</span></p>
 
@@ -45,7 +45,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     <script>
-        // Ta funkcja gwarantuje, że kod uruchomi się dopiero po załadowaniu całej strony
         window.addEventListener('DOMContentLoaded', () => {
 
             // === KONFIGURACJA FIREBASE ===
@@ -54,30 +53,26 @@
                 apiKey: "TWOJ_API_KEY",
                 authDomain: "TWOJ_AUTH_DOMAIN",
                 databaseURL: "TWOJA_DATABASE_URL",
-                projectId: "TWOJ_PROJECT_ID",
-                storageBucket: "TWOJ_STORAGE_BUCKET",
-                messagingSenderId: "TWOJ_MESSAGING_SENDER_ID",
-                appId: "TWOJ_APP_ID"
+                projectId: "TWOJ_PROJECT_ID"
             };
             firebase.initializeApp(firebaseConfig);
             const database = firebase.database();
 
             // === ZMIENNE GRY ===
-            let gameState = {
+            let gameState = {};
+            const defaultState = {
                 cookies: 0, upgradeLevel: 0, upgradeCost: 10,
                 prestigePoints: 0, prestigeCost: 1000000, prestigeUpgradeLevel1: 0,
                 nickname: "Anonim"
             };
             
             const D = document;
-            const f = n => Math.floor(n).toLocaleString('pl-PL');
+            const f = n => Math.floor(n || 0).toLocaleString('pl-PL');
 
             // === FUNKCJE GRY ===
             const calculateBonusFromUpgrades = (level) => {
                 let bonus = 0;
-                for (let i = 0; i < level; i++) {
-                    bonus += 1 + Math.floor(i / 10);
-                }
+                for (let i = 0; i < level; i++) { bonus += 1 + Math.floor(i / 10); }
                 return bonus;
             };
 
@@ -93,7 +88,7 @@
                 
                 D.getElementById('prestige-section').style.display = gameState.cookies >= gameState.prestigeCost || gameState.prestigePoints > 0 ? 'block' : 'none';
                 D.getElementById('prestige-btn').textContent = `Prestiż (Koszt: ${f(gameState.prestigeCost)})`;
-                D.getElementById('prestige-points').textContent = gameState.prestigePoints;
+                D.getElementById('prestige-points').textContent = f(gameState.prestigePoints);
                 D.getElementById('prestige-upgrade-1-level').textContent = gameState.prestigeUpgradeLevel1;
                 D.getElementById('prestige-upgrade-1').textContent = `+1 do bazy/klik (Koszt: ${gameState.prestigeUpgradeLevel1 + 1} PP)`;
             };
@@ -104,16 +99,22 @@
                     const safeNickname = gameState.nickname.replace(/[.#$\[\]]/g, '_');
                     database.ref('leaderboard/' + safeNickname).set({
                         nn: gameState.nickname,
-                        c: Math.floor(gameState.cookies)
+                        c: Math.floor(gameState.cookies || 0)
                     });
                 }
             };
 
             const loadGame = () => {
-                const savedData = JSON.parse(localStorage.getItem('clickerGameSave'));
-                if (savedData) {
-                    Object.assign(gameState, savedData);
+                let savedData;
+                try {
+                    savedData = JSON.parse(localStorage.getItem('clickerGameSave'));
+                } catch (e) {
+                    console.error("Błąd parsowania zapisu, startuję od nowa.");
+                    savedData = null;
                 }
+                // Użyj domyślnego stanu i nadpisz go zapisanymi danymi (jeśli są poprawne)
+                gameState = { ...defaultState, ...savedData };
+                
                 D.getElementById('nickname-input').value = gameState.nickname;
                 updateUI();
             };
@@ -136,9 +137,13 @@
             D.getElementById('prestige-btn').onclick = () => {
                 if (gameState.cookies >= gameState.prestigeCost) {
                     gameState.prestigePoints++;
-                    gameState.cookies = 0;
-                    gameState.upgradeLevel = 0;
-                    gameState.upgradeCost = 10;
+                    // Zachowaj punkty prestiżu i nick, zresetuj resztę
+                    const prestigeState = {
+                        prestigePoints: gameState.prestigePoints,
+                        prestigeUpgradeLevel1: gameState.prestigeUpgradeLevel1,
+                        nickname: gameState.nickname
+                    };
+                    gameState = { ...defaultState, ...prestigeState };
                     gameState.prestigeCost *= 1.15;
                     updateUI();
                 }
