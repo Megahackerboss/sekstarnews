@@ -539,30 +539,29 @@ function showCommentEditor(comment) {
     // =================================================================
     
     /** Konfiguruje przycisk udostępniania dla danego artykułu. */
-    function setupShareButton(article) {
-        elements.articleDetail.shareButton.onclick = async () => {
-            const shareData = {
-                title: article.title,
-                text: `Sprawdź ten artykuł: ${article.title}`,
-                url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
-            };
-
-            try {
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                } else if (navigator.clipboard) {
-                    await navigator.clipboard.writeText(shareData.url);
-                    alert('Link do artykułu skopiowany do schowka!');
-                } else {
-                    // Fallback dla starszych przeglądarek
-                    window.prompt("Skopiuj ten link ręcznie:", shareData.url);
-                }
-            } catch (err) {
-                console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
-                window.prompt("Skopiuj ten link ręcznie:", shareData.url);
-            }
+    // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+function setupShareButton(article) {
+    shareButton.onclick = async () => {
+        const shareData = {
+            title: article.title,
+            text: `Sprawdź ten artykuł: ${article.title}`,
+            url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
         };
-    }
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareData.url);
+                alert('Link do artykułu skopiowany do schowka!');
+            } else {
+                throw new Error('APIs not supported');
+            }
+        } catch (err) {
+            console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
+            window.prompt("Skopiuj ten link ręcznie:", shareData.url);
+        }
+    };
+}
     
     /** Sprawdza, czy URL zawiera "deep link" do konkretnego artykułu i go wyświetla. */
     function handleDeepLink() {
@@ -763,5 +762,6 @@ function setupShareButton(article) {
 
     init(); // Uruchomienie aplikacji!
 });
+
 
 
