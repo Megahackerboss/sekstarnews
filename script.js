@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 3. STAN APLIKACJI ===========================================
     // =================================================================
 
-   let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, activeCommentsRef: null, sliderInterval: null, currentSlideIndex: 0, localUserId: null };
+   let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, activeCommentsRef: null, sliderInterval: null, currentSlideIndex: 0, localUserId: null,     currentUser: null, currentUserPermissions: null  };
     
     // =================================================================
     // === 4. LOGIKA UI (POPRAWIONA) =====================================
@@ -139,9 +139,77 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 6. UWIERZYTELNIANIE =========================================
     // =================================================================
     
-    function initializeAuth() { auth.onAuthStateChanged(user => { state.isUserAdmin = user && !user.isAnonymous; elements.adminButton.textContent = state.isUserAdmin ? "≡" : "?"; if (!user) auth.signInAnonymously().catch(err => console.error("Błąd logowania anonimowego:", err)); }); }
+    function initializeAuth() {
+    auth.onAuthStateChanged(user => {
+        if (user && !user.isAnonymous) {
+            // Użytkownik jest zalogowany!
+            const userRef = database.ref(`users/${user.uid}`);
+            const permsRef = database.ref(`permissions/${user.uid}`);
+
+            userRef.once('value', snapshot => {
+                state.currentUser = { uid: user.uid, email: user.email, ...snapshot.val() };
+                updateUIForAuthState(); // Nowa funkcja do aktualizacji UI
+            });
+            permsRef.once('value', snapshot => {
+                state.currentUserPermissions = snapshot.val() || {};
+                updateUIForAuthState(); // Aktualizuj UI ponownie z uprawnieniami
+            });
+
+        } else {
+            // Użytkownik jest gościem (lub wylogowany)
+            state.currentUser = null;
+            state.currentUserPermissions = null;
+            updateUIForAuthState();
+            if (!user) { // Jeśli nie ma nawet anonimowego, stwórz go
+                auth.signInAnonymously().catch(err => console.error("Błąd logowania anonimowego:", err));
+            }
+        }
+    });
+}
     function handleAdminLogin() { const email = elements.loginForm.emailInput.value; const pass = elements.loginForm.passwordInput.value; auth.signInWithEmailAndPassword(email, pass).then(() => showMainView()).catch(err => alert(`Błąd logowania: ${err.message}`)); }
 
+
+    function handleRegistration() {
+    const nick = elements.registerForm.nickInput.value.trim();
+    const email = elements.registerForm.emailInput.value;
+    const pass = elements.registerForm.passwordInput.value;
+
+    if (nick.length < 3) {
+        alert("Nick musi mieć co najmniej 3 znaki.");
+        return;
+    }
+
+    const nickRef = database.ref(`nicknames/${nick.toLowerCase()}`);
+
+    nickRef.once('value', snapshot => {
+        if (snapshot.exists()) {
+            alert("Ten nick jest już zajęty!");
+        } else {
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then(userCredential => {
+                    const user = userCredential.user;
+                    // Stwórz wpisy w bazie danych
+                    database.ref(`users/${user.uid}`).set({
+                        nickname: nick,
+                        email: email,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    database.ref(`nicknames/${nick.toLowerCase()}`).set(user.uid);
+                    // Domyślne uprawnienia dla nowego użytkownika
+                    database.ref(`permissions/${user.uid}`).set({
+                        canCreateArticles: false,
+                        canEditArticles: false,
+                        canDeleteArticles: false,
+                        isAdmin: false
+                    });
+                    alert("Rejestracja pomyślna!");
+                    showMainView();
+                })
+                .catch(error => alert(`Błąd rejestracji: ${error.message}`));
+        }
+    });
+}
+    
     // =================================================================
     // === 7. FUNKCJE POMOCNICZE ========================================
     // =================================================================
@@ -150,6 +218,45 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupShareButton(article) { if (!article || !article.id) return; elements.articleDetail.shareButton.onclick = async () => { const shareData = { title: article.title, text: `Sprawdź ten artykuł z Sekstar News: ${article.title}`, url: `${window.location.origin}${window.location.pathname}#article-${article.id}` }; try { if (navigator.share) await navigator.share(shareData); else if (navigator.clipboard) { await navigator.clipboard.writeText(shareData.url); alert('Link skopiowany!'); } else throw new Error('No share API'); } catch (err) { window.prompt("Skopiuj ten link:", shareData.url); } }; }
     function handleDeepLink() { const hash = window.location.hash; if (hash && hash.startsWith('#article-')) { const articleId = hash.substring(9); displayArticle(articleId); } else { showMainView(); } }
     function parseCommentFormatting(text) { let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;'); safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>'); return safeText; }
+
+
+
+    function updateUIForAuthState() {
+    if (state.currentUser) {
+        // Zalogowany użytkownik
+        elements.adminButton.textContent = "👤"; // Ikona profilu
+        elements.commentSection.nameInput.value = state.currentUser.nickname;
+        elements.commentSection.nameInput.disabled = true; // Zablokuj pole, jest zalogowany
+        
+        // Logika pokazywania przycisków admina
+        const userMenu = document.getElementById('user-menu'); // Pobierz menu
+        userMenu.innerHTML = ''; // Wyczyść menu przed dodaniem przycisków
+        
+        const profileBtn = document.createElement('button');
+        profileBtn.id = 'user-menu-profile';
+        profileBtn.textContent = 'Mój Profil';
+        userMenu.appendChild(profileBtn);
+
+        if (state.currentUserPermissions?.canCreateArticles) {
+            const addBtn = document.createElement('button');
+            addBtn.id = 'user-menu-add';
+            addBtn.textContent = 'Dodaj nowy artykuł';
+            userMenu.appendChild(addBtn);
+        }
+        // ...dodaj inne przyciski na podstawie uprawnień...
+
+        const logoutBtn = document.createElement('button');
+        logoutBtn.id = 'user-menu-logout';
+        logoutBtn.textContent = 'Wyloguj';
+        userMenu.appendChild(logoutBtn);
+
+    } else {
+        // Gość
+        elements.adminButton.textContent = "?";
+        elements.commentSection.nameInput.value = "";
+        elements.commentSection.nameInput.disabled = false;
+    }
+}
     
     // =================================================================
     // === 8. GŁÓWNY MENEDŻER ZDARZEŃ (DELEGACJA) ======================
@@ -244,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
 
 
 
