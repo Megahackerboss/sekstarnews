@@ -98,26 +98,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     
     function bindEventListeners() {
+        // GŁÓWNY NASŁUCHIWACZ KLIKNIĘĆ
         document.body.addEventListener('click', (event) => {
             const target = event.target;
             
-            // --- Główne przyciski i nawigacja ---
-            if (target.id === 'back-button') { if (state.commentsListener) state.commentsListener.off(); showMainView(); return; }
-            if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
-            if (target.id === 'load-more-comments-btn') { loadMoreComments(); return; }
-            if (target.id === 'clear-cache-btn') { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
+            // --- Nawigacja i przyciski ogólne ---
+            if (target === elements.backButton) { if (state.commentsListener) state.commentsListener.off(); showMainView(); return; }
+            if (target === elements.loadMoreArticlesBtn) { loadMoreArticles(); return; }
+            if (target === elements.loadMoreCommentsBtn) { loadMoreComments(); return; }
+            if (target === elements.clearCacheBtn) { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
 
             // --- Logowanie i panel admina ---
-            if (target.id === 'admin-button') { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
-            if (target.id === 'admin-menu-add') { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
-            if (target.id === 'admin-menu-logout') { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
-            if (target.id === 'login-submit') { handleAdminLogin(); return; }
-            if (target.id === 'login-cancel') { showView(null); return; }
+            if (target === elements.adminButton) { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
+            if (target === elements.adminMenu.addButton) { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
+            if (target === elements.adminMenu.logoutButton) { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
+            if (target === elements.loginForm.submitButton) { handleAdminLogin(); return; }
+            if (target === elements.loginForm.cancelButton) { showView(null); return; }
 
-            // --- Interakcje z artykułami i komentarzami ---
+            // --- Edytor Artykułów ---
+            if (target === elements.editorForm.cancelButton) { showView(null); return; }
+            if (target === elements.editorForm.deleteButton) { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showView(null); }); } return; }
+
+            // --- Kliknięcie na artykuł ---
             const articleCard = target.closest('.article-card');
-            if (articleCard) { window.location.hash = `article-${articleCard.dataset.id}`; window.scrollTo(0, 0); return; }
+            if (articleCard) {
+                if (state.isUserAdmin) {
+                    const articleToEdit = state.allArticlesMeta.find(a => a.id == articleCard.dataset.id);
+                    showEditor(articleToEdit);
+                } else {
+                    window.location.hash = `article-${articleCard.dataset.id}`;
+                }
+                window.scrollTo(0, 0);
+                return;
+            }
 
+            // --- Interakcje w komentarzach (Edytuj/Usuń) ---
             const commentEl = target.closest('.comment');
             if (commentEl) {
                 const commentId = commentEl.dataset.commentId;
@@ -136,13 +151,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelBtn.onclick = () => { messageP.style.display = ''; controlsDiv.style.display = ''; editInput.remove(); saveBtn.remove(); cancelBtn.remove(); };
                 }
             }
+            
+            // --- Kliknięcie na polubienie ---
+            if (target === elements.articleDetail.likeButton || target.closest('#like-button')) {
+                const liked = localStorage.getItem(`liked_${state.currentArticle.id}`) === 'true';
+                const likesRef = database.ref(`articles/${state.currentArticle.id}/likes`);
+                if (liked) { localStorage.removeItem(`liked_${state.currentArticle.id}`); likesRef.set(firebase.database.ServerValue.increment(-1)); } 
+                else { localStorage.setItem(`liked_${state.currentArticle.id}`, 'true'); likesRef.set(firebase.database.ServerValue.increment(1)); }
+            }
         });
 
         // --- Zdarzenia formularzy i inne ---
         elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
         elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showView(null); }); });
-        elements.editorForm.cancelButton.addEventListener('click', () => showView(null));
-        elements.editorForm.deleteButton.addEventListener('click', () => { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showView(null); }); } });
         window.addEventListener('hashchange', handleDeepLink);
     }
 
