@@ -149,38 +149,111 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 function renderComments(comments) {
-    elements.commentSection.list.innerHTML = '';
+    const commentListContainer = elements.commentSection.list;
+    
+    // Stwórz nową listę w pamięci, aby uniknąć migotania
+    const newList = document.createElement('div');
+
     if (comments.length === 0) {
-        elements.commentSection.list.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
-        return;
+        newList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
+    } else {
+        comments.forEach(comment => {
+            const commentEl = document.createElement('div');
+            commentEl.className = 'comment';
+            commentEl.dataset.commentId = comment.commentId;
+
+            let controls = '';
+            if (state.isUserAdmin || comment.userId === state.localUserId) {
+                controls = `
+                    <div class="comment-controls">
+                        <button class="edit-comment-btn">Edytuj</button>
+                        <button class="delete-comment-btn">Usuń</button>
+                    </div>`;
+            }
+
+            commentEl.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${comment.author || 'Anonim'}</span>
+                    <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
+                </div>
+                <p class="comment-message">${comment.message || ''}</p>
+                ${controls}`;
+            
+            newList.appendChild(commentEl);
+        });
     }
 
-    comments.forEach(comment => {
-        const commentEl = document.createElement('div');
-        commentEl.className = 'comment';
-        commentEl.dataset.commentId = comment.commentId; // Dodajemy ID do głównego elementu
+    // Podmień całą zawartość listy komentarzy za jednym razem
+    commentListContainer.innerHTML = '';
+    commentListContainer.appendChild(newList);
+    
+    // --- NOWA, POPRAWIONA LOGIKA NASŁUCHIWANIA ---
+    
+    // Usuń stary nasłuchiwacz, jeśli istnieje, aby uniknąć duplikatów
+    if (commentListContainer.eventListener) {
+        commentListContainer.removeEventListener('click', commentListContainer.eventListener);
+    }
 
-        let controls = '';
-        if (state.isUserAdmin || comment.userId === state.localUserId) {
-            controls = `
-                <div class="comment-controls">
-                    <button class="edit-comment-btn">Edytuj</button>
-                    <button class="delete-comment-btn">Usuń</button>
-                </div>`;
-        }
+    // Stwórz nową funkcję nasłuchującą
+    const eventHandler = (event) => {
+        const target = event.target;
+        const commentEl = target.closest('.comment');
+        if (!commentEl) return;
+
+        const commentId = commentEl.dataset.commentId;
         
-        // Podstawowa struktura komentarza
-        commentEl.innerHTML = `
-            <div class="comment-header">
-                <span class="comment-author">${comment.author || 'Anonim'}</span>
-                <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
-            </div>
-            <p class="comment-message">${comment.message || ''}</p>
-            ${controls}`;
+        // Obsługa przycisku "USUŃ"
+        if (target.classList.contains('delete-comment-btn')) {
+            if (confirm("Czy na pewno chcesz usunąć ten komentarz?")) {
+                database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove();
+            }
+        }
+
+        // Obsługa przycisku "EDYTUJ"
+        if (target.classList.contains('edit-comment-btn')) {
+            const commentData = comments.find(c => c.commentId === commentId);
+            const messageP = commentEl.querySelector('.comment-message');
+            const controlsDiv = commentEl.querySelector('.comment-controls');
             
-        elements.commentSection.list.appendChild(commentEl);
-    });
+            const editInput = document.createElement('textarea');
+            editInput.className = 'comment-edit-textarea';
+            editInput.value = commentData.message;
+
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Zapisz';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Anuluj';
+
+            messageP.style.display = 'none';
+            controlsDiv.style.display = 'none';
+            commentEl.appendChild(editInput);
+            commentEl.appendChild(saveBtn);
+            commentEl.appendChild(cancelBtn);
+            editInput.focus();
+
+            saveBtn.onclick = () => {
+                const newText = editInput.value.trim();
+                if (newText) {
+                    database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText);
+                }
+            };
+
+            cancelBtn.onclick = () => {
+                messageP.style.display = '';
+                controlsDiv.style.display = '';
+                editInput.remove();
+                saveBtn.remove();
+                cancelBtn.remove();
+            };
+        }
+    };
+
+    // Dodaj nowy nasłuchiwacz i zapamiętaj go, aby móc go usunąć później
+    commentListContainer.addEventListener('click', eventHandler);
+    commentListContainer.eventListener = eventHandler;
+}
 
     // Używamy delegacji zdarzeń, aby obsłużyć kliknięcia na przyciski
     elements.commentSection.list.addEventListener('click', (event) => {
@@ -421,4 +494,5 @@ function renderComments(comments) {
 
     init();
 });
+
 
