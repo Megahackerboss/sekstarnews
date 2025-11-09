@@ -541,24 +541,36 @@ function showCommentEditor(comment) {
     /** Konfiguruje przycisk udostępniania dla danego artykułu. */
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 function setupShareButton(article) {
+    const shareButton = document.getElementById('share-button'); // Upewniamy się, że mamy przycisk
     shareButton.onclick = async () => {
+        // Tworzymy unikalny URL z hashem, który pozwoli wrócić do artykułu
         const shareData = {
             title: article.title,
-            text: `Sprawdź ten artykuł: ${article.title}`,
+            text: `Sprawdź ten artykuł z Sekstar News: ${article.title}`,
             url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
         };
+
         try {
+            // Najpierw próbujemy użyć natywnego udostępniania (Web Share API)
             if (navigator.share) {
                 await navigator.share(shareData);
-            } else if (navigator.clipboard) {
+            } 
+            // Jeśli to się nie uda, próbujemy skopiować link do schowka
+            else if (navigator.clipboard) {
                 await navigator.clipboard.writeText(shareData.url);
                 alert('Link do artykułu skopiowany do schowka!');
-            } else {
-                throw new Error('APIs not supported');
+            } 
+            // Jeśli obie opcje zawiodą, pokazujemy okno do ręcznego kopiowania
+            else {
+                throw new Error('Web Share and Clipboard API not supported');
             }
         } catch (err) {
             console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
-            window.prompt("Skopiuj ten link ręcznie:", shareData.url);
+            // Ostateczne rozwiązanie - okienko prompt
+            window.prompt(
+                "Nie udało się udostępnić automatycznie. Skopiuj ten link ręcznie:", 
+                shareData.url
+            );
         }
     };
 }
@@ -699,30 +711,7 @@ function handleDeepLink() {
     }
 }
 
-// NOWA, SPRAWDZONA FUNKCJA UDOSTĘPNIANIA
-function setupShareButton(article) {
-    const shareButton = document.getElementById('share-button');
-    shareButton.onclick = async () => {
-        const shareData = {
-            title: article.title,
-            text: `Sprawdź ten artykuł: ${article.title}`,
-            url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
-        };
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-            } else if (navigator.clipboard) {
-                await navigator.clipboard.writeText(shareData.url);
-                alert('Link do artykułu skopiowany do schowka!');
-            } else {
-                throw new Error('APIs not supported');
-            }
-        } catch (err) {
-            console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
-            window.prompt("Skopiuj ten link ręcznie:", shareData.url);
-        }
-    };
-}
+
     // =================================================================
     // === 9. INICJALIZACJA APLIKACJI ==================================
     // =================================================================
@@ -762,6 +751,7 @@ function setupShareButton(article) {
 
     init(); // Uruchomienie aplikacji!
 });
+
 
 
 
