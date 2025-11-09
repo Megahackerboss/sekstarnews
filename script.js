@@ -178,7 +178,7 @@ function renderComments(comments) {
                     <span class="comment-author">${comment.author || 'Anonim'}</span>
                     <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
                 </div>
-                <p class="comment-message">${comment.message || ''}</p>
+                <p class="comment-message">${parseCommentFormatting(comment.message || '')}</p>
                 ${controls}`;
             
             newList.appendChild(commentEl);
@@ -361,6 +361,35 @@ function renderComments(comments) {
             }
         }
     }
+
+    // Wklej to w sekcji 7. FUNKCJE POMOCNICZE
+function parseCommentFormatting(text) {
+    // Prosty escape, aby zapobiec wstrzykiwaniu HTML przez użytkownika
+    let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Kolejność jest ważna: od najbardziej złożonych do najprostszych
+    // ***Pogrubienie i kursywa*** -> <b><i>...</i></b>
+    safeText = safeText.replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>');
+    // **Pogrubienie** -> <b>...</b>
+    safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    // *Kursywa* -> <i>...</i>
+    safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+    return safeText;
+}
+
+    // Wklej to w sekcji 7. FUNKCJE POMOCNICZE
+function wrapTextInFormat(syntax) {
+    const textarea = elements.commentSection.messageInput;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const replacement = syntax + selectedText + syntax;
+    
+    textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+    textarea.focus();
+    textarea.selectionEnd = end + syntax.length;
+}
     
     // =================================================================
     // === 8. OBSŁUGA ZDARZEŃ ===========================================
@@ -414,6 +443,8 @@ function renderComments(comments) {
         });
         
         window.addEventListener('hashchange', handleDeepLink);
+        document.getElementById('format-bold-btn').addEventListener('click', () => wrapTextInFormat('**'));
+        document.getElementById('format-italic-btn').addEventListener('click', () => wrapTextInFormat('*'));
     }
 
     // =================================================================
@@ -432,4 +463,5 @@ function renderComments(comments) {
 
     init();
 });
+
 
