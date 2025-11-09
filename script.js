@@ -102,7 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const target = event.target;
             
             // --- Główne przyciski i nawigacja ---
-            if (target.id === 'back-button' || target.closest('#back-button')) { if (state.commentsListener) state.commentsListener.off(); window.location.hash = ''; return; }
+            if (target.id === 'back-button' || target.closest('#back-button')) {
+    if (state.commentsListener) state.commentsListener.off();
+    showMainView(); // <-- ZMIANA: Bezpośrednie wywołanie funkcji
+    return;
+}
             if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
             if (target.id === 'load-more-comments-btn') { loadMoreComments(); return; }
             if (target.id === 'clear-cache-btn') { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
@@ -183,3 +187,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
