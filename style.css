@@ -258,3 +258,28 @@ body {
 .comment-controls button:hover {
     color: #ffdd4b;
 }
+.comment .comment-edit-textarea {
+    width: 100%;
+    min-height: 80px;
+    background-color: #142a4a;
+    border: 1px solid #4a68a5;
+    color: white;
+    padding: 5px;
+    margin: 10px 0;
+    box-sizing: border-box;
+}
+
+.comment button {
+    background: none;
+    border: 1px solid #4a68a5;
+    color: #aab8d3;
+    cursor: pointer;
+    margin-left: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.comment button:hover {
+    background-color: #3a5a8f;
+    color: white;
+}
