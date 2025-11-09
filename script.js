@@ -413,12 +413,19 @@ function displayArticle(articleId) {
 
     /** Dodaje nowy komentarz do bazy danych. */
     function addComment(author, message) {
-    const commentsRef = database.ref(`comments/${currentArticle.id}`);
+    // Sprawdzamy czy na pewno mamy załadowany artykuł i ID użytkownika
+    if (!state.currentArticle || !state.localUserId) {
+        console.error("Nie można dodać komentarza: brak artykułu lub ID użytkownika.");
+        return;
+    }
+
+    const commentsRef = database.ref(`comments/${state.currentArticle.id}`);
     const newCommentRef = commentsRef.push();
     newCommentRef.set({
         author: author,
         message: message,
-        userId: localUserId, // Zapisujemy ID użytkownika
+        // POPRAWKA: Używamy ID z obiektu state, które jest inicjowane na starcie
+        userId: state.localUserId, 
         timestamp: firebase.database.ServerValue.TIMESTAMP
     });
 }
@@ -751,6 +758,7 @@ function handleDeepLink() {
 
     init(); // Uruchomienie aplikacji!
 });
+
 
 
 
