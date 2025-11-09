@@ -303,3 +303,7 @@ body {
 .format-buttons button:hover {
     background-color: #3a5a8f;
 }
+
+.load-more-btn { display: block; margin: 20px auto; padding: 10px 20px; /* ... reszta stylów ... */ }
+#clear-cache-btn { background: none; border: 1px solid #4a68a5; color: #aaa; /* ... reszta ... */ }
+
