@@ -23,6 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const database = firebase.database();
     const auth = firebase.auth();
 
+    // NOWA FUNKCJA DO TWORZENIA LOKALNEGO ID UŻYTKOWNIKA
+function getOrCreateLocalUserId() {
+    let userId = localStorage.getItem('localUserId');
+    if (!userId) {
+        // Tworzy losowe ID w formacie "user_123456"
+        userId = `user_${Math.floor(Math.random() * 1000000)}`;
+        localStorage.setItem('localUserId', userId);
+    }
+    return userId;
+}
+
     // =================================================================
     // === 2. ELEMENTY DOM =============================================
     // =================================================================
@@ -96,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         commentsListener: null,
         sliderInterval: null,
         currentSlideIndex: 0,
+        localUserId = null; 
     };
 
     // =================================================================
@@ -191,12 +203,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /** Wyświetla pełną treść wybranego artykułu. */
-    function displayArticle(articleId) {
-        const article = state.allArticles.find(a => a.id == articleId);
-        if (!article) {
-            console.error("Nie znaleziono artykułu o ID:", articleId);
-            return;
-        }
+    // ZASTĄP STARĄ WERSJĘ displayArticle() TĄ NOWĄ:
+function displayArticle(articleId) {
+    currentArticle = allArticles.find(a => a.id == articleId);
+    if (!currentArticle) {
+        console.warn(`Nie znaleziono artykułu o ID: ${articleId}`);
+        showMainView(); // Wróć do strony głównej, jeśli artykuł nie istnieje
+        return;
+    }
+    
+    if (commentsListener) commentsListener.off();
+
+    const articleDate = document.getElementById('article-date');
+    const articleAuthor = document.getElementById('article-author');
+    const articleContent = document.getElementById('article-content');
+    articleDate.textContent = currentArticle.date;
+    articleAuthor.textContent = `Autor: ${currentArticle.author}`;
+    articleContent.innerHTML = currentArticle.content;
+    
+    mainView.classList.add('hidden');
+    articleView.classList.remove('hidden');
+    backButton.classList.remove('hidden');
+    navTitle.style.marginLeft = '0px';
+    clearInterval(slideInterval);
+
+    getLikes(articleId);
+    listenForComments(articleId);
+    setupShareButton(currentArticle); // Aktywujemy przycisk udostępniania
+}
         
         state.currentArticle = article;
         
@@ -248,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (alreadyLiked) {
             elements.articleDetail.likeButton.classList.add('liked');
-            elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♥';
+            elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♥️';
         } else {
             elements.articleDetail.likeButton.classList.remove('liked');
             elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♡';
@@ -367,28 +401,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** Nasłuchuje nowych komentarzy dla danego artykułu. */
     function listenForComments(articleId) {
-        const commentsRef = database.ref(`comments/${articleId}`).orderByChild('timestamp');
-        state.commentsListener = commentsRef; // zapisz referencję, by ją później wyłączyć
-        
-        commentsRef.on('value', (snapshot) => {
-            const commentsData = snapshot.val();
-            const comments = commentsData ? Object.values(commentsData) : [];
-            renderComments(comments.reverse());
-        });
-    }
+    const commentsList = document.getElementById('comments-list');
+    commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp');
+    commentsListener.on('value', (snapshot) => {
+        const commentsData = snapshot.val();
+        const comments = commentsData ? Object.entries(commentsData).map(([key, value]) => ({ commentId: key, ...value })) : [];
+        loadComments(comments.reverse(), commentsList);
+    });
+}
 
     /** Dodaje nowy komentarz do bazy danych. */
     function addComment(author, message) {
-        if (!state.currentArticle) return;
-        
-        const commentsRef = database.ref(`comments/${state.currentArticle.id}`);
-        const newCommentRef = commentsRef.push();
-        newCommentRef.set({
-            author: author,
-            message: message,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+    const commentsRef = database.ref(`comments/${currentArticle.id}`);
+    const newCommentRef = commentsRef.push();
+    newCommentRef.set({
+        author: author,
+        message: message,
+        userId: localUserId, // Zapisujemy ID użytkownika
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+}
+
+
+
+function loadComments(comments, commentsList) {
+    commentsList.innerHTML = '';
+    if (comments.length === 0) {
+        commentsList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
+    } else {
+        comments.forEach(comment => {
+            const commentEl = document.createElement('div');
+            commentEl.className = 'comment';
+            
+            let controls = '';
+            if (loggedIn || comment.userId === localUserId) {
+                controls = `
+                    <div class="comment-controls">
+                        <button class="edit-comment-btn" data-comment-id="${comment.commentId}">Edytuj</button>
+                        <button class="delete-comment-btn" data-comment-id="${comment.commentId}">Usuń</button>
+                    </div>
+                `;
+            }
+
+            commentEl.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${comment.author || 'Anonim'}</span>
+                    <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
+                </div>
+                <p class="comment-message">${comment.message || ''}</p>
+                ${controls}
+            `;
+            commentsList.appendChild(commentEl);
+        });
+
+        document.querySelectorAll('.edit-comment-btn').forEach(btn => {
+            btn.onclick = () => {
+                const commentToEdit = comments.find(c => c.commentId === btn.dataset.commentId);
+                showCommentEditor(commentToEdit);
+            };
+        });
+
+        document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+            btn.onclick = () => {
+                if (confirm("Czy na pewno chcesz usunąć ten komentarz?")) {
+                    database.ref(`comments/${currentArticle.id}/${btn.dataset.commentId}`).remove();
+                }
+            };
         });
     }
+}
+
+
+
+// NOWA FUNKCJA DO OBSŁUGI EDYTORA KOMENTARZY
+function showCommentEditor(comment) {
+    const commentEditorView = document.getElementById('comment-editor-view');
+    const commentEditorTextarea = document.getElementById('comment-editor-textarea');
+    const commentEditorSaveBtn = document.getElementById('comment-editor-save');
+    const commentEditorCancelBtn = document.getElementById('comment-editor-cancel');
+
+    commentEditorTextarea.value = comment.message;
+    commentEditorView.classList.remove('hidden');
+
+    commentEditorSaveBtn.onclick = () => {
+        const newText = commentEditorTextarea.value;
+        if (newText) {
+            database.ref(`comments/${currentArticle.id}/${comment.commentId}/message`).set(newText);
+            commentEditorView.classList.add('hidden');
+        }
+    };
+    commentEditorCancelBtn.onclick = () => commentEditorView.classList.add('hidden');
+}
     
     // =================================================================
     // === 6. LOGIKA UWIERZYTELNIANIA ==================================
@@ -573,17 +676,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
+    // =================================================================
+    // === 9.2. SHAREBUTTON           ==================================
+    // =================================================================
+
+
+// NOWA FUNKCJA DO OBSŁUGI LINKÓW
+function handleDeepLink() {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#article-')) {
+        const articleId = hash.substring(9);
+        if (allArticles.length > 0 && allArticles.some(a => a.id == articleId)) {
+            displayArticle(articleId);
+        } else if (allArticles.length === 0) {
+            // Jeśli artykuły się jeszcze nie załadowały, poczekaj i spróbuj ponownie
+            setTimeout(handleDeepLink, 100);
+        }
+    } else {
+        // Jeśli nie ma hasha w linku, pokaż stronę główną
+        showMainView();
+    }
+}
+
+// NOWA, SPRAWDZONA FUNKCJA UDOSTĘPNIANIA
+function setupShareButton(article) {
+    const shareButton = document.getElementById('share-button');
+    shareButton.onclick = async () => {
+        const shareData = {
+            title: article.title,
+            text: `Sprawdź ten artykuł: ${article.title}`,
+            url: `${window.location.origin}${window.location.pathname}#article-${article.id}`
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareData.url);
+                alert('Link do artykułu skopiowany do schowka!');
+            } else {
+                throw new Error('APIs not supported');
+            }
+        } catch (err) {
+            console.warn("Automatyczne udostępnianie/kopiowanie nie powiodło się:", err);
+            window.prompt("Skopiuj ten link ręcznie:", shareData.url);
+        }
+    };
+}
     // =================================================================
     // === 9. INICJALIZACJA APLIKACJI ==================================
     // =================================================================
 
     /** Główna funkcja inicjalizująca aplikację. */
     function init() {
-        bindEventListeners();
-        initializeAuth();
-        loadArticlesFromFirebase();
-        handleDeepLink();
+    // Uruchamiamy tworzenie ID na samym początku
+    localUserId = getOrCreateLocalUserId();
+
+    backButton.addEventListener('click', () => {
+        if (commentsListener) commentsListener.off();
+        showMainView();
+    });
+
+    function handleArticleClick(event) {
+        const targetElement = event.target.closest('[data-id]');
+        if (targetElement) {
+            if (loggedIn) {
+                const articleToEdit = allArticles.find(a => a.id == targetElement.dataset.id);
+                showEditor(articleToEdit);
+            } else {
+                // Zamiast od razu wyświetlać, zmieniamy hash w URL
+                window.location.hash = `article-${targetElement.dataset.id}`;
+            }
+            window.scrollTo(0, 0);
+        }
     }
+    featuredSliderContainer.addEventListener('click', handleArticleClick);
+    newsListView.addEventListener('click', handleArticleClick);
+    
+    // Nasłuchuj zmiany hasha w URL (gdy ktoś kliknie link lub przycisk wstecz)
+    window.addEventListener('hashchange', handleDeepLink);
+
+    // Załaduj artykuły z Firebase (to automatycznie uruchomi też handleDeepLink)
+    loadArticlesFromFirebase();
+}
 
     init(); // Uruchomienie aplikacji!
 });
+
