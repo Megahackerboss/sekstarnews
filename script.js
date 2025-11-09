@@ -149,9 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
-// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
-// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
-// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 function renderComments(comments) {
     elements.commentSection.list.innerHTML = '';
     if (comments.length === 0) {
@@ -184,68 +181,6 @@ function renderComments(comments) {
             
         elements.commentSection.list.appendChild(commentEl);
     });
-
-    // Używamy delegacji zdarzeń, aby obsłużyć kliknięcia na przyciski
-    elements.commentSection.list.addEventListener('click', (event) => {
-        const target = event.target;
-        const commentEl = target.closest('.comment');
-        if (!commentEl) return;
-
-        const commentId = commentEl.dataset.commentId;
-        const commentData = comments.find(c => c.commentId === commentId);
-
-        // --- Obsługa przycisku "USUŃ" ---
-        if (target.classList.contains('delete-comment-btn')) {
-            if (confirm("Czy na pewno chcesz usunąć ten komentarz?")) {
-                database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove();
-            }
-        }
-
-        // --- Obsługa przycisku "EDYTUJ" ---
-        if (target.classList.contains('edit-comment-btn')) {
-            const messageP = commentEl.querySelector('.comment-message');
-            const controlsDiv = commentEl.querySelector('.comment-controls');
-            
-            // Stwórz pole edycji
-            const editInput = document.createElement('textarea');
-            editInput.className = 'comment-edit-textarea';
-            editInput.value = commentData.message;
-
-            // Stwórz przyciski "Zapisz" i "Anuluj"
-            const saveBtn = document.createElement('button');
-            saveBtn.textContent = 'Zapisz';
-            const cancelBtn = document.createElement('button');
-            cancelBtn.textContent = 'Anuluj';
-
-            // Ukryj starą treść i przyciski, pokaż pole edycji
-            messageP.style.display = 'none';
-            controlsDiv.style.display = 'none';
-            commentEl.appendChild(editInput);
-            commentEl.appendChild(saveBtn);
-            commentEl.appendChild(cancelBtn);
-            editInput.focus();
-
-            // Logika przycisku "ZAPISZ"
-            saveBtn.onclick = () => {
-                const newText = editInput.value.trim();
-                if (newText) {
-                    database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText);
-                }
-                // Nie musimy nic więcej robić, Firebase sam odświeży widok
-            };
-
-            // Logika przycisku "ANULUJ"
-            cancelBtn.onclick = () => {
-                // Po prostu przywróć widoczność starych elementów i usuń nowe
-                messageP.style.display = '';
-                controlsDiv.style.display = '';
-                editInput.remove();
-                saveBtn.remove();
-                cancelBtn.remove();
-            };
-        }
-    });
-}
 
     // Używamy delegacji zdarzeń, aby obsłużyć kliknięcia na przyciski
     elements.commentSection.list.addEventListener('click', (event) => {
@@ -486,6 +421,3 @@ function renderComments(comments) {
 
     init();
 });
-
-
-
