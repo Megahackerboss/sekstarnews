@@ -344,5 +344,53 @@ body {
     line-height: 36px;
 }
 
+/* Style dla nowego widoku profilu w panelu użytkownika */
+.profile-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #4a68a5;
+}
+
+.profile-tabs button {
+    width: 50%;
+    margin: 0;
+    padding: 10px;
+    border-radius: 0;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #aab8d3;
+    font-size: 16px;
+}
+
+.profile-tabs button.active {
+    color: #ffdd4b;
+    border-bottom: 3px solid #ffdd4b;
+}
+
+#profile-info-form label {
+    display: block;
+    text-align: left;
+    margin-top: 15px;
+    color: #aab8d3;
+}
+
+#profile-info-form input {
+    margin-top: 5px; /* Mniejszy margines */
+}
+
+#profile-info-form input:disabled {
+    background-color: #142a4a;
+    cursor: not-allowed;
+}
+
+#profile-save-button {
+    background-color: #ffdd4b;
+    color: #142a4a;
+    font-weight: bold;
+}
+
+
+
 
 
