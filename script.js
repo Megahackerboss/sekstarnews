@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSlideIndex = 0;
     let localUserId = null;
 
-    // === 4. LOGIKA UŻYTKOWNIKA I APLIKACJI ===
+    // === 4. LOGIKA UŻYTKOWNIKA I LOGOWANIA ===
     function getOrCreateLocalUserId() { let userId = localStorage.getItem('localUserId'); if (!userId) { userId = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`; localStorage.setItem('localUserId', userId); } return userId; }
     auth.onAuthStateChanged(user => { if (user && !user.isAnonymous) { loggedIn = true; adminButton.textContent = "≡"; } else { loggedIn = false; adminButton.textContent = "?"; if (!user) { auth.signInAnonymously().catch(error => console.error("Błąd logowania anonimowego:", error)); } } });
     adminButton.addEventListener('click', () => { if (loggedIn) { adminMenu.classList.toggle('hidden'); } else { loginView.classList.remove('hidden'); } });
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(slideInterval);
         getLikes(articleId);
         listenForComments(articleId);
-        setupShareButton(currentArticle); // <-- NAPRAWIONE: Wywołanie funkcji
+        setupShareButton(currentArticle);
     }
 
     function handleDeepLink() { const hash = window.location.hash; if (hash && hash.startsWith('#article-')) { const articleId = hash.substring(9); if (allArticles.length > 0) { displayArticle(articleId); } else { setTimeout(handleDeepLink, 100); } } }
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentForm = document.getElementById('comment-form'); commentForm.onsubmit = (e) => { e.preventDefault(); const nameInput = document.getElementById('comment-name'); const messageInput = document.getElementById('comment-message'); if (nameInput.value && messageInput.value) { addComment(nameInput.value, messageInput.value); commentForm.reset(); } };
     function showCommentEditor(comment) { const commentEditorView = document.getElementById('comment-editor-view'); const commentEditorTextarea = document.getElementById('comment-editor-textarea'); const commentEditorSaveBtn = document.getElementById('comment-editor-save'); const commentEditorCancelBtn = document.getElementById('comment-editor-cancel'); commentEditorTextarea.value = comment.message; commentEditorView.classList.remove('hidden'); commentEditorSaveBtn.onclick = () => { const newText = commentEditorTextarea.value; if (newText) { database.ref(`comments/${currentArticle.id}/${comment.commentId}/message`).set(newText); commentEditorView.classList.add('hidden'); } }; commentEditorCancelBtn.onclick = () => commentEditorView.classList.add('hidden'); }
     
-    // NAPRAWIONA FUNKCJA setupShareButton (dokładnie ta, która działała)
+    // NAPRAWIONA FUNKCJA setupShareButton (z pełną, działającą treścią)
     function setupShareButton(article) {
         shareButton.onclick = async () => {
             const shareData = {
