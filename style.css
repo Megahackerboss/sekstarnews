@@ -283,3 +283,23 @@ body {
     background-color: #3a5a8f;
     color: white;
 }
+
+
+/* Style dla przycisków formatowania komentarzy */
+.format-buttons {
+    margin-bottom: 5px;
+}
+.format-buttons button {
+    background-color: #20385a;
+    border: 1px solid #4a68a5;
+    color: white;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+.format-buttons button:hover {
+    background-color: #3a5a8f;
+}
