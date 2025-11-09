@@ -160,18 +160,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 9. INICJALIZACJA APLIKACJI ==================================
     // =================================================================
 
-    function init() {
-        state.localUserId = getOrCreateLocalUserId();
-        bindEventListeners();
-        initializeAuth();
-        
-        // Sprawdź, czy jest deep link na starcie
-        const initialHash = window.location.hash;
-        loadInitialArticles(() => {
-            if (initialHash && initialHash.startsWith('#article-')) {
-                displayArticle(initialHash.substring(9));
-            }
-        });
+    // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+function init() {
+    state.localUserId = getOrCreateLocalUserId();
+    
+    // Ustawiamy nasłuchiwacze dla przycisków i formularzy
+    bindEventListeners();
+    
+    // Uruchamiamy system uwierzytelniania
+    initializeAuth();
+    
+    // GŁÓWNY MECHANIZM NAWIGACJI: Nasłuchuj zmiany adresu URL
+    window.addEventListener('hashchange', handleRouteChange);
+
+    // Ładujemy początkowe artykuły, a po załadowaniu,
+    // uruchamiamy router po raz pierwszy, aby sprawdzić, czy
+    // nie trzeba od razu otworzyć jakiegoś artykułu (deep link).
+    loadInitialArticles(handleRouteChange);
+}
 
         // Nasłuchuj przyszłych zmian w URL
         window.addEventListener('popstate', () => {
@@ -186,3 +192,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
