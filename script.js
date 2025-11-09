@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 }
     function loadMoreArticles() { if (state.areAllArticlesLoaded) return; elements.loadMoreArticlesBtn.disabled = true; elements.loadMoreArticlesBtn.textContent = 'Ładowanie...'; let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE); query.once('value', snapshot => { const data = snapshot.val(); if (!data || Object.keys(data).length === 0) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.allArticlesMeta.push(...newArticles); state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order; displayNewsList(state.allArticlesMeta); elements.loadMoreArticlesBtn.disabled = false; elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej'; if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } }); }
-    function function listenForComments(articleId) {
+    function listenForComments(articleId) {
     // Jeśli mamy aktywną referencję do komentarzy z POPRZEDNIEGO artykułu, wyłączamy nasłuchiwanie.
     if (state.activeCommentsRef) {
         state.activeCommentsRef.off();
@@ -244,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
 
 
 
