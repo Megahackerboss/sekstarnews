@@ -162,8 +162,37 @@ document.addEventListener('DOMContentLoaded', () => {
 }
     function loadMoreComments() { const currentlyShown = document.querySelectorAll('#comments-list .comment').length; const nextComments = state.allComments.slice(0, currentlyShown + COMMENTS_PER_PAGE); renderComments(nextComments); if (nextComments.length >= state.allComments.length) { elements.loadMoreCommentsBtn.classList.add('hidden'); } }
     function setupLikes(articleId) { const likesRef = database.ref(`articles/${articleId}/likes`); likesRef.on('value', (snapshot) => updateLikeButton(snapshot.val() || 0, articleId)); }
-    function addComment(author, message) { if (!state.currentArticle || !state.currentArticle.id || !state.localUserId) return; database.ref(`comments/${state.currentArticle.id}`).push().set({ author, message, userId: state.localUserId, timestamp: firebase.database.ServerValue.TIMESTAMP }); }
+    async function addComment(author, message) {
+    const nickToCheck = author.trim().toLowerCase();
+    
+    // Sprawdź, czy użytkownik jest zalogowany
+    if (state.currentUser) {
+        // Jeśli zalogowany użytkownik używa nicku INNEGO niż swój własny
+        if (nickToCheck !== state.currentUser.nick.toLowerCase()) {
+            const snapshot = await database.ref(`takenNicks/${nickToCheck}`).once('value');
+            if (snapshot.exists()) {
+                alert("Ten nick jest zarezerwowany przez innego użytkownika. Proszę wybrać inny.");
+                return; // Przerwij dodawanie komentarza
+            }
+        }
+    } else {
+        // Jeśli użytkownik NIE jest zalogowany, zawsze sprawdzaj nick
+        const snapshot = await database.ref(`takenNicks/${nickToCheck}`).once('value');
+        if (snapshot.exists()) {
+            alert("Ten nick jest zarezerwowany przez innego użytkownika. Proszę wybrać inny.");
+            return; // Przerwij dodawanie komentarza
+        }
+    }
 
+    // Jeśli wszystkie warunki zostały spełnione, dodaj komentarz
+    const userIdToSave = state.currentUser ? state.currentUser.uid : state.localUserId;
+    database.ref(`comments/${state.currentArticle.id}`).push().set({
+        author: author.trim(),
+        message,
+        userId: userIdToSave,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+}
 // =================================================================
 // === 6. UWIERZYTELNIANIE I ZARZĄDZANIE UŻYTKOWNIKIEM =============
 // =================================================================
@@ -193,19 +222,23 @@ function initializeAuth() {
     });
 }
 
+// Zastąp starą wersję tą nową
 function handleRegistration(e) {
     e.preventDefault();
-    const nick = elements.userPanel.registerNick.value;
-    const email = elements.userPanel.registerEmail.value;
+    const nick = elements.userPanel.registerNick.value.trim();
+    const email = elements.userPanel.registerEmail.value.trim();
     const password = elements.userPanel.registerPassword.value;
 
     auth.createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
             const uid = userCredential.user.uid;
-            database.ref(`users/${uid}`).set({
-                nick: nick,
-                email: email
-            });
+            const updates = {};
+            // Zapisz profil użytkownika
+            updates[`users/${uid}`] = { nick: nick, email: email };
+            // Dodaj nick do listy zajętych (używamy małych liter dla spójności)
+            updates[`takenNicks/${nick.toLowerCase()}`] = uid;
+
+            database.ref().update(updates); // Wykonaj oba zapisy jednocześnie
             elements.userPanel.view.classList.add('hidden');
         })
         .catch(error => {
@@ -231,21 +264,29 @@ function handleLogout() {
     auth.signOut();
     elements.userPanel.view.classList.add('hidden');
 }
-    function handleProfileUpdate(e) {
+// Zastąp starą wersję tą nową
+function handleProfileUpdate(e) {
     e.preventDefault();
     const newNick = elements.userPanel.profileNickInput.value.trim();
+    const oldNick = state.currentUser.nick;
 
     if (!newNick) {
         alert("Nick nie może być pusty.");
         return;
     }
-    
+
     if (state.currentUser && state.currentUser.uid) {
-        database.ref(`users/${state.currentUser.uid}`).update({ nick: newNick })
+        const updates = {};
+        // Zaktualizuj nick w profilu
+        updates[`users/${state.currentUser.uid}/nick`] = newNick;
+        // Usuń stary nick z listy zajętych
+        updates[`takenNicks/${oldNick.toLowerCase()}`] = null;
+        // Dodaj nowy nick do listy zajętych
+        updates[`takenNicks/${newNick.toLowerCase()}`] = state.currentUser.uid;
+
+        database.ref().update(updates)
             .then(() => {
-                // Zaktualizuj nick w stanie lokalnym
                 state.currentUser.nick = newNick;
-                // Odśwież interfejs
                 updateUserUI();
                 alert("Zapisano zmiany!");
             })
@@ -271,8 +312,10 @@ function handleLogout() {
 
 // Funkcja aktualizująca wygląd interfejsu w zależności od stanu logowania
 // Zastąp starą funkcję updateUserUI tą nową
+// Ta funkcja zastępuje całą poprzednią wersję updateUserUI
 function updateUserUI() {
     if (state.currentUser) {
+        // --- Kod dla UŻYTKOWNIKA ZALOGOWANEGO ---
         elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
         elements.userPanel.nickSpan.textContent = state.currentUser.nick;
         elements.userPanel.infoView.classList.remove('hidden');
@@ -282,15 +325,26 @@ function updateUserUI() {
         elements.userPanel.profileNickInput.value = state.currentUser.nick;
         elements.userPanel.profileEmailInput.value = state.currentUser.email;
         
+        // Pokaż przycisk dodawania artykułu, jeśli to admin
         if (state.isUserAdmin) {
             elements.userPanel.addArticleBtn.classList.remove('hidden');
         } else {
             elements.userPanel.addArticleBtn.classList.add('hidden');
         }
+
+        // Wypełnij pole nicku w komentarzach i upewnij się, że nie jest zablokowane
+        elements.commentSection.nameInput.value = state.currentUser.nick;
+        elements.commentSection.nameInput.disabled = false;
+
     } else {
+        // --- Kod dla UŻYTKOWNIKA NIEZALOGOWANEGO ---
         elements.userPanel.button.textContent = '?';
         elements.userPanel.infoView.classList.add('hidden');
         elements.userPanel.authView.classList.remove('hidden');
+
+        // Wyczyść pole nicku w komentarzach i upewnij się, że nie jest zablokowane
+        elements.commentSection.nameInput.value = '';
+        elements.commentSection.nameInput.disabled = false;
     }
 }
     // =================================================================
@@ -455,6 +509,7 @@ function updateUserUI() {
     
     init();
 });
+
 
 
 
