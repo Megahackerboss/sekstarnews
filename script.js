@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getOrCreateLocalUserId() { let userId = localStorage.getItem('localUserId'); if (!userId) { userId = `user_${Math.random().toString(36).substr(2, 9)}`; localStorage.setItem('localUserId', userId); } return userId; }
     function setupShareButton(article) { if (!article || !article.id) return; elements.articleDetail.shareButton.onclick = async () => { const shareData = { title: article.title, text: `Sprawdź ten artykuł z Sekstar News: ${article.title}`, url: `${window.location.origin}${window.location.pathname}#article-${article.id}` }; try { if (navigator.share) await navigator.share(shareData); else if (navigator.clipboard) { await navigator.clipboard.writeText(shareData.url); alert('Link skopiowany!'); } else throw new Error('No share API'); } catch (err) { window.prompt("Skopiuj ten link:", shareData.url); } }; }
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
-function router() {
+function handleDeepLink() {
     const hash = window.location.hash;
 
     // Sprawdź, czy URL wskazuje na konkretny artykuł
@@ -102,7 +102,7 @@ function router() {
             displayArticle(articleId);
         } else {
             // Jeśli nie, poczekaj chwilę i spróbuj ponownie (na wypadek wejścia z linku)
-            setTimeout(router, 100);
+            setTimeout(handleDeepLink, 100);
         }
     } else {
         // Jeśli nie ma hasha w linku, zawsze pokazuj stronę główną
@@ -206,7 +206,7 @@ function init() {
     
     // ZACZYNAMY OD NASŁUCHIWANIA ZMIAN W URL
     // To jest kluczowa zmiana. Router będzie reagował na każdą zmianę.
-    window.addEventListener('hashchange', router);
+    window.addEventListener('hashchange', handleDeepLink);
 
     // Ładujemy początkowe artykuły. Po ich załadowaniu,
     // funkcja `loadInitialArticles` wywoła router, aby sprawdzić,
@@ -216,6 +216,7 @@ function init() {
     
     init();
 });
+
 
 
 
