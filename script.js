@@ -90,85 +90,91 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function getOrCreateLocalUserId() { let userId = localStorage.getItem('localUserId'); if (!userId) { userId = `user_${Math.random().toString(36).substr(2, 9)}`; localStorage.setItem('localUserId', userId); } return userId; }
     function setupShareButton(article) { if (!article || !article.id) return; elements.articleDetail.shareButton.onclick = async () => { const shareData = { title: article.title, text: `Sprawdź ten artykuł z Sekstar News: ${article.title}`, url: `${window.location.origin}${window.location.pathname}#article-${article.id}` }; try { if (navigator.share) await navigator.share(shareData); else if (navigator.clipboard) { await navigator.clipboard.writeText(shareData.url); alert('Link skopiowany!'); } else throw new Error('No share API'); } catch (err) { window.prompt("Skopiuj ten link:", shareData.url); } }; }
-    function handleDeepLink() { const hash = window.location.hash; if (hash && hash.startsWith('#article-')) { const articleId = hash.substring(9); displayArticle(articleId); } else { showMainView(); } }
+    function// ZASTĄP STARĄ WERSJĘ handleDeepLink() TĄ NOWĄ:
+function handleDeepLink() {
+    const hash = window.location.hash;
+
+    // Jeśli w adresie jest #article-ID, pokaż artykuł
+    if (hash && hash.startsWith('#article-')) {
+        const articleId = hash.substring(9);
+        // Sprawdź, czy artykuły są już załadowane, zanim spróbujesz go wyświetlić
+        if (state.allArticlesMeta.length > 0) {
+            displayArticle(articleId);
+        } else {
+            // Jeśli nie, poczekaj chwilę i spróbuj ponownie
+            setTimeout(handleDeepLink, 100);
+        }
+    } else {
+        // W przeciwnym razie (gdy hash jest pusty), pokaż stronę główną
+        showMainView();
+    }
+}
     function parseCommentFormatting(text) { let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;'); safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>'); return safeText; }
     
     // =================================================================
     // === 8. GŁÓWNY MENEDŻER ZDARZEŃ (DELEGACJA) ======================
     // =================================================================
     
-    function bindEventListeners() {
-        document.body.addEventListener('click', (event) => {
-            const target = event.target;
-            
-            // --- Główne przyciski i nawigacja ---
-            if (target.id === 'back-button' || target.closest('#back-button')) { if (state.commentsListener) state.commentsListener.off(); window.location.hash = ''; return; }
-            if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
-            if (target.id === 'load-more-comments-btn') { loadMoreComments(); return; }
-            if (target.id === 'clear-cache-btn') { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
-
-            // --- Logowanie i panel admina ---
-            if (target.id === 'admin-button' || target.closest('#admin-button')) { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
-            if (target.id === 'admin-menu-add') { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
-            if (target.id === 'admin-menu-logout') { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
-            if (target.id === 'login-submit') { handleAdminLogin(); return; }
-            if (target.id === 'login-cancel') { showMainView(); return; }
-
-            // --- Edytor Artykułów ---
-            if (target.id === 'editor-cancel') { showMainView(); return; }
-            if (target.id === 'editor-delete') { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showMainView(); }); } return; }
-
-            // --- Interakcje z artykułami i komentarzami ---
-            const articleCard = target.closest('[data-id]');
-            if (articleCard) {
-                if (state.isUserAdmin && (target.closest('#news-list-view') || target.closest('#featured-slider-container'))) {
-                    const articleToEdit = state.allArticlesMeta.find(a => a.id == articleCard.dataset.id);
-                    showEditor(articleToEdit);
-                } else {
-                    window.location.hash = `article-${articleCard.dataset.id}`;
-                }
-                window.scrollTo(0, 0);
-                return;
+    // ZASTĄP STARĄ WERSJĘ bindEventListeners() TĄ NOWĄ:
+function bindEventListeners() {
+    // --- GŁÓWNY, POJEDYNCZY NASŁUCHIWACZ KLIKNIĘĆ ---
+    document.body.addEventListener('click', (event) => {
+        const target = event.target;
+        
+        // --- Nawigacja ---
+        if (target.id === 'back-button' || target.closest('#back-button')) {
+            window.location.hash = ''; // Zawsze i tylko zmieniaj hash
+            return;
+        }
+        const articleCard = target.closest('[data-id]');
+        if (articleCard) {
+            if (state.isUserAdmin) {
+                const articleToEdit = state.allArticlesMeta.find(a => a.id == articleCard.dataset.id);
+                showEditor(articleToEdit);
+            } else {
+                window.location.hash = `article-${articleCard.dataset.id}`; // Zawsze i tylko zmieniaj hash
             }
+            window.scrollTo(0, 0);
+            return;
+        }
 
-            const commentEl = target.closest('.comment');
-            if (commentEl) {
-                const commentId = commentEl.dataset.commentId;
-                if (target.classList.contains('delete-comment-btn')) { if (confirm("Usunąć komentarz?")) { database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove(); } return; }
-                if (target.classList.contains('edit-comment-btn')) {
-                    const commentData = state.allComments.find(c => c.commentId === commentId);
-                    const messageP = commentEl.querySelector('.comment-message');
-                    const controlsDiv = commentEl.querySelector('.comment-controls');
-                    const editInput = document.createElement('textarea'); editInput.className = 'comment-edit-textarea'; editInput.value = commentData.message;
-                    const saveBtn = document.createElement('button'); saveBtn.textContent = 'Zapisz';
-                    const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Anuluj';
-                    messageP.style.display = 'none'; controlsDiv.style.display = 'none';
-                    commentEl.appendChild(editInput); commentEl.appendChild(saveBtn); commentEl.appendChild(cancelBtn);
-                    editInput.focus();
-                    saveBtn.onclick = () => { const newText = editInput.value.trim(); if (newText) { database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText); } };
-                    cancelBtn.onclick = () => { messageP.style.display = ''; controlsDiv.style.display = ''; editInput.remove(); saveBtn.remove(); cancelBtn.remove(); };
-                }
-            }
-            
-            // --- Kliknięcie na polubienie ---
-            if (target.id === 'like-button' || target.closest('#like-button')) {
-                const liked = localStorage.getItem(`liked_${state.currentArticle.id}`) === 'true';
-                const likesRef = database.ref(`articles/${state.currentArticle.id}/likes`);
-                if (liked) { localStorage.removeItem(`liked_${state.currentArticle.id}`); likesRef.set(firebase.database.ServerValue.increment(-1)); } 
-                else { localStorage.setItem(`liked_${state.currentArticle.id}`, 'true'); likesRef.set(firebase.database.ServerValue.increment(1)); }
-            }
-        });
+        // --- Przyciski "Więcej" i Cache ---
+        if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
+        if (target.id === 'load-more-comments-btn') { loadMoreComments(); return; }
+        if (target.id === 'clear-cache-btn') { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
 
-        // --- Zdarzenia formularzy i inne ---
-        elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
-        elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
-        window.addEventListener('hashchange', () => {
-             // Czekaj aż Firebase załaduje dane, zanim obsłużysz link
-            if (state.allArticlesMeta.length > 0) {
-                handleDeepLink();
+        // --- Panel Admina ---
+        if (target.id === 'admin-button' || target.closest('#admin-button')) { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
+        if (target.id === 'admin-menu-add') { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
+        if (target.id === 'admin-menu-logout') { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
+        if (target.id === 'login-submit') { handleAdminLogin(); return; }
+        if (target.id === 'login-cancel') { showMainView(); return; }
+        if (target.id === 'editor-cancel') { showMainView(); return; }
+        if (target.id === 'editor-delete') { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showMainView(); }); } return; }
+
+        // --- Interakcje w komentarzach ---
+        const commentEl = target.closest('.comment');
+        if (commentEl) {
+            const commentId = commentEl.dataset.commentId;
+            if (target.classList.contains('delete-comment-btn')) { if (confirm("Usunąć komentarz?")) { database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove(); } return; }
+            if (target.classList.contains('edit-comment-btn')) {
+                // ... (logika edycji w miejscu, bez zmian) ...
             }
-        });
-    }
+        }
+
+        // --- Kliknięcie na polubienie ---
+        if (target.id === 'like-button' || target.closest('#like-button')) {
+            // ... (logika polubień, bez zmian) ...
+        }
+    });
+
+    // --- Inne nasłuchiwacze ---
+    elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); /* ... */ });
+    elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); /* ... */ });
+    
+    // GŁÓWNY NASŁUCHIWACZ ZMIANY ADRESU URL
+    window.addEventListener('hashchange', handleDeepLink);
+}
 
     // =================================================================
     // === 9. INICJALIZACJA APLIKACJI ==================================
@@ -183,3 +189,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
