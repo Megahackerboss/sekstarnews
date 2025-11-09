@@ -70,7 +70,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 5. INTERAKCJE Z FIREBASE =====================================
     // =================================================================
     
-    function loadInitialArticles(callback) { let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE); query.once('value', (snapshot) => { const data = snapshot.val(); if (!data) { elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order; displayNewsList(state.allArticlesMeta); const featured = state.allArticlesMeta.filter(a => a.featured); setupFeaturedSlider(featured); if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } else { elements.loadMoreArticlesBtn.classList.remove('hidden'); } if(callback) callback(); }); }
+    // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+function loadInitialArticles(callback) { // Dodajemy 'callback' jako argument
+    let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE);
+    
+    query.once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            elements.loadMoreArticlesBtn.classList.add('hidden');
+            return;
+        }
+        const newArticles = Object.values(data);
+        state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999));
+        state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order;
+        
+        displayNewsList(state.allArticlesMeta);
+        const featured = state.allArticlesMeta.filter(a => a.featured);
+        setupFeaturedSlider(featured);
+
+        if (newArticles.length < ARTICLES_PER_PAGE) {
+            state.areAllArticlesLoaded = true;
+            elements.loadMoreArticlesBtn.classList.add('hidden');
+        } else {
+            elements.loadMoreArticlesBtn.classList.remove('hidden');
+        }
+
+        // Wywołaj router, gdy dane są gotowe
+        if (callback) callback();
+    });
+}
     function loadMoreArticles() { if (state.areAllArticlesLoaded) return; elements.loadMoreArticlesBtn.disabled = true; elements.loadMoreArticlesBtn.textContent = 'Ładowanie...'; let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE); query.once('value', snapshot => { const data = snapshot.val(); if (!data || Object.keys(data).length === 0) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.allArticlesMeta.push(...newArticles); state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order; displayNewsList(state.allArticlesMeta); elements.loadMoreArticlesBtn.disabled = false; elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej'; if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } }); }
     function listenForComments(articleId) { if (state.commentsListener) state.commentsListener.off(); state.allComments = []; state.areAllCommentsLoaded = false; elements.loadMoreCommentsBtn.classList.add('hidden'); const commentsRef = database.ref(`comments/${articleId}`); state.commentsListener = commentsRef.on('value', (snapshot) => { const data = snapshot.val(); state.allComments = data ? Object.entries(data).map(([key, val]) => ({ ...val, commentId: key })).sort((a,b) => b.timestamp - a.timestamp) : []; const initialComments = state.allComments.slice(0, COMMENTS_PER_PAGE); renderComments(initialComments); if (state.allComments.length > COMMENTS_PER_PAGE) { elements.loadMoreCommentsBtn.classList.remove('hidden'); } else { elements.loadMoreCommentsBtn.classList.add('hidden'); } }); }
     function loadMoreComments() { const currentlyShown = document.querySelectorAll('#comments-list .comment').length; const nextComments = state.allComments.slice(0, currentlyShown + COMMENTS_PER_PAGE); renderComments(nextComments); if (nextComments.length >= state.allComments.length) { elements.loadMoreCommentsBtn.classList.add('hidden'); } }
@@ -192,4 +220,5 @@ function init() {
     
     init();
 });
+
 
