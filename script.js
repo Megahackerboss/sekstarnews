@@ -1,6 +1,6 @@
 /**
  * Główny skrypt aplikacji Sekstar News.
- * Ostateczna, stabilna wersja z poprawnym zarządzaniem stanem i routingiem.
+ * Ostateczna, stabilna wersja z prostą i niezawodną logiką.
  */
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -52,43 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, commentsListener: null, sliderInterval: null, currentSlideIndex: 0, localUserId: null };
     
     // =================================================================
-    // === 4. ROUTING I ZARZĄDZANIE WIDOKAMI (NAPRAWIONE) ================
+    // === 4. LOGIKA UI (POPRAWIONA) =====================================
     // =================================================================
     
-    function handleRouteChange() {
-        const hash = window.location.hash;
-        if (hash && hash.startsWith('#article-')) {
-            const articleId = hash.substring(9);
-            if (state.allArticlesMeta.length > 0) {
-                displayArticle(articleId);
-            } else {
-                // Poczekaj, jeśli artykuły się jeszcze nie załadowały
-                setTimeout(handleRouteChange, 100);
-            }
-        } else {
-            showMainView();
-        }
-    }
-
-    function showView(viewToShow) {
-        Object.values(elements.views).forEach(view => view.classList.add('hidden'));
-        if (viewToShow) viewToShow.classList.remove('hidden');
-    }
-
-    function showMainView() {
-        showView(elements.views.main);
-        elements.backButton.classList.add('hidden');
-        elements.navTitle.style.marginLeft = '0px';
-        startSlideInterval();
-        state.currentArticle = null;
-    }
-
-    // =================================================================
-    // === 5. LOGIKA UI ================================================
-    // =================================================================
-    
+    function showView(viewToShow) { Object.values(elements.views).forEach(view => view.classList.add('hidden')); if (viewToShow) viewToShow.classList.remove('hidden'); }
+    function showMainView() { showView(elements.views.main); elements.backButton.classList.add('hidden'); elements.navTitle.style.marginLeft = '0px'; startSlideInterval(); state.currentArticle = null; window.history.pushState({}, '', window.location.pathname); }
     function displayNewsList(articles) { elements.newsList.innerHTML = ''; articles.forEach(article => { const card = document.createElement('div'); card.className = 'article-card'; card.dataset.id = article.id; card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`; elements.newsList.appendChild(card); }); }
-    async function displayArticle(articleId) { let articleMeta = state.allArticlesMeta.find(a => a.id == articleId); if (!articleMeta) { try { const snapshot = await database.ref(`articles_meta/${articleId}`).once('value'); articleMeta = snapshot.val(); if (!articleMeta) { showMainView(); return; } state.allArticlesMeta.push(articleMeta); } catch (error) { showMainView(); return; } } state.currentArticle = articleMeta; if (state.commentsListener) state.commentsListener.off(); elements.articleDetail.date.textContent = articleMeta.date; elements.articleDetail.author.textContent = `Autor: ${articleMeta.author}`; elements.articleDetail.content.innerHTML = '<p>Ładowanie treści...</p>'; showView(elements.views.article); elements.backButton.classList.remove('hidden'); elements.navTitle.style.marginLeft = '0px'; clearInterval(state.sliderInterval); const cachedArticle = JSON.parse(localStorage.getItem(`article_${articleId}`)); if (cachedArticle && cachedArticle.lastUpdated >= articleMeta.lastUpdated) { elements.articleDetail.content.innerHTML = cachedArticle.content; } else { database.ref(`articles_content/${articleId}`).once('value', (snapshot) => { const articleContent = snapshot.val(); if (articleContent) { elements.articleDetail.content.innerHTML = articleContent.content; localStorage.setItem(`article_${articleId}`, JSON.stringify({ content: articleContent.content, lastUpdated: articleMeta.lastUpdated })); } }); } state.allComments = []; state.areAllCommentsLoaded = false; listenForComments(articleId); setupLikes(articleId); setupShareButton(articleMeta); }
+    async function displayArticle(articleId) { let articleMeta = state.allArticlesMeta.find(a => a.id == articleId); if (!articleMeta) { try { const snapshot = await database.ref(`articles_meta/${articleId}`).once('value'); articleMeta = snapshot.val(); if (!articleMeta) { showMainView(); return; } state.allArticlesMeta.push(articleMeta); } catch (error) { showMainView(); return; } } state.currentArticle = articleMeta; if (state.commentsListener) state.commentsListener.off(); elements.articleDetail.date.textContent = articleMeta.date; elements.articleDetail.author.textContent = `Autor: ${articleMeta.author}`; elements.articleDetail.content.innerHTML = '<p>Ładowanie treści...</p>'; showView(elements.views.article); elements.backButton.classList.remove('hidden'); elements.navTitle.style.marginLeft = '0px'; clearInterval(state.sliderInterval); const cachedArticle = JSON.parse(localStorage.getItem(`article_${articleId}`)); if (cachedArticle && cachedArticle.lastUpdated >= articleMeta.lastUpdated) { elements.articleDetail.content.innerHTML = cachedArticle.content; } else { database.ref(`articles_content/${articleId}`).once('value', (snapshot) => { const articleContent = snapshot.val(); if (articleContent) { elements.articleDetail.content.innerHTML = articleContent.content; localStorage.setItem(`article_${articleId}`, JSON.stringify({ content: articleContent.content, lastUpdated: articleMeta.lastUpdated })); } }); } state.allComments = []; state.areAllCommentsLoaded = false; listenForComments(articleId); setupLikes(articleId); setupShareButton(articleMeta); window.location.hash = `article-${articleId}`; }
     function renderComments(comments) { const commentListContainer = elements.commentSection.list; commentListContainer.innerHTML = ''; if (comments.length === 0) { commentListContainer.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>'; return; } comments.forEach(comment => { const commentEl = document.createElement('div'); commentEl.className = 'comment'; commentEl.dataset.commentId = comment.commentId; let controls = ''; if (state.isUserAdmin || comment.userId === state.localUserId) { controls = `<div class="comment-controls"><button class="edit-comment-btn">Edytuj</button><button class="delete-comment-btn">Usuń</button></div>`; } commentEl.innerHTML = `<div class="comment-header"><span class="comment-author">${comment.author || 'Anonim'}</span><span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span></div><p class="comment-message">${parseCommentFormatting(comment.message || '')}</p>${controls}`; commentListContainer.appendChild(commentEl); }); }
     function setupFeaturedSlider(articles) { if (articles.length === 0) { elements.slider.container.style.display = 'none'; return; } elements.slider.container.style.display = 'block'; elements.slider.container.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`; const content = elements.slider.container.querySelector('.slider-content'); const nav = elements.slider.container.querySelector('.slider-nav'); articles.forEach((article, index) => { const slide = document.createElement('div'); slide.className = 'slide'; slide.dataset.id = article.id; slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`; content.appendChild(slide); const navDot = document.createElement('span'); navDot.className = 'nav-dot'; navDot.dataset.index = index; nav.appendChild(navDot); }); showSlide(0); startSlideInterval(); }
     function showSlide(index) { const slides = elements.slider.container.querySelectorAll('.slide'); const dots = elements.slider.container.querySelectorAll('.nav-dot'); if (!slides.length) return; if (index >= slides.length) index = 0; if (index < 0) index = slides.length - 1; slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active')); if (slides[index]) slides[index].classList.add('active'); if (dots[index]) dots[index].classList.add('active'); state.currentSlideIndex = index; }
@@ -97,10 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLikeButton(likesCount, articleId) { elements.articleDetail.likeCount.textContent = likesCount; const alreadyLiked = localStorage.getItem(`liked_${articleId}`) === 'true'; if (alreadyLiked) { elements.articleDetail.likeButton.classList.add('liked'); elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♥️'; } else { elements.articleDetail.likeButton.classList.remove('liked'); elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♡'; } elements.articleDetail.likeButton.disabled = false; }
 
     // =================================================================
-    // === 6. INTERAKCJE Z FIREBASE =====================================
+    // === 5. INTERAKCJE Z FIREBASE =====================================
     // =================================================================
     
-    function loadInitialArticles() { let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE); query.once('value', (snapshot) => { const data = snapshot.val(); if (!data) { elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order; displayNewsList(state.allArticlesMeta); const featured = state.allArticlesMeta.filter(a => a.featured); setupFeaturedSlider(featured); if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } else { elements.loadMoreArticlesBtn.classList.remove('hidden'); } handleRouteChange(); }); }
+    function loadInitialArticles(callback) { let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE); query.once('value', (snapshot) => { const data = snapshot.val(); if (!data) { elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order; displayNewsList(state.allArticlesMeta); const featured = state.allArticlesMeta.filter(a => a.featured); setupFeaturedSlider(featured); if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } else { elements.loadMoreArticlesBtn.classList.remove('hidden'); } if(callback) callback(); }); }
     function loadMoreArticles() { if (state.areAllArticlesLoaded) return; elements.loadMoreArticlesBtn.disabled = true; elements.loadMoreArticlesBtn.textContent = 'Ładowanie...'; let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE); query.once('value', snapshot => { const data = snapshot.val(); if (!data || Object.keys(data).length === 0) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.allArticlesMeta.push(...newArticles); state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order; displayNewsList(state.allArticlesMeta); elements.loadMoreArticlesBtn.disabled = false; elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej'; if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } }); }
     function listenForComments(articleId) { if (state.commentsListener) state.commentsListener.off(); state.allComments = []; state.areAllCommentsLoaded = false; elements.loadMoreCommentsBtn.classList.add('hidden'); const commentsRef = database.ref(`comments/${articleId}`); state.commentsListener = commentsRef.on('value', (snapshot) => { const data = snapshot.val(); state.allComments = data ? Object.entries(data).map(([key, val]) => ({ ...val, commentId: key })).sort((a,b) => b.timestamp - a.timestamp) : []; const initialComments = state.allComments.slice(0, COMMENTS_PER_PAGE); renderComments(initialComments); if (state.allComments.length > COMMENTS_PER_PAGE) { elements.loadMoreCommentsBtn.classList.remove('hidden'); } else { elements.loadMoreCommentsBtn.classList.add('hidden'); } }); }
     function loadMoreComments() { const currentlyShown = document.querySelectorAll('#comments-list .comment').length; const nextComments = state.allComments.slice(0, currentlyShown + COMMENTS_PER_PAGE); renderComments(nextComments); if (nextComments.length >= state.allComments.length) { elements.loadMoreCommentsBtn.classList.add('hidden'); } }
@@ -108,14 +78,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function addComment(author, message) { if (!state.currentArticle || !state.currentArticle.id || !state.localUserId) return; database.ref(`comments/${state.currentArticle.id}`).push().set({ author, message, userId: state.localUserId, timestamp: firebase.database.ServerValue.TIMESTAMP }); }
 
     // =================================================================
-    // === 7. UWIERZYTELNIANIE =========================================
+    // === 6. UWIERZYTELNIANIE =========================================
     // =================================================================
     
     function initializeAuth() { auth.onAuthStateChanged(user => { state.isUserAdmin = user && !user.isAnonymous; elements.adminButton.textContent = state.isUserAdmin ? "≡" : "?"; if (!user) auth.signInAnonymously().catch(err => console.error("Błąd logowania anonimowego:", err)); }); }
     function handleAdminLogin() { const email = elements.loginForm.emailInput.value; const pass = elements.loginForm.passwordInput.value; auth.signInWithEmailAndPassword(email, pass).then(() => showMainView()).catch(err => alert(`Błąd logowania: ${err.message}`)); }
 
     // =================================================================
-    // === 8. FUNKCJE POMOCNICZE ========================================
+    // === 7. FUNKCJE POMOCNICZE ========================================
     // =================================================================
     
     function getOrCreateLocalUserId() { let userId = localStorage.getItem('localUserId'); if (!userId) { userId = `user_${Math.random().toString(36).substr(2, 9)}`; localStorage.setItem('localUserId', userId); } return userId; }
@@ -123,14 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function parseCommentFormatting(text) { let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;'); safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>'); return safeText; }
     
     // =================================================================
-    // === 9. GŁÓWNY MENEDŻER ZDARZEŃ (DELEGACJA) ======================
+    // === 8. GŁÓWNY MENEDŻER ZDARZEŃ (DELEGACJA) ======================
     // =================================================================
     
     function bindEventListeners() {
         document.body.addEventListener('click', (event) => {
             const target = event.target;
             
-            if (target === elements.backButton || target.closest('#back-button')) { window.location.hash = ''; return; }
+            if (target === elements.backButton || target.closest('#back-button')) { showMainView(); return; }
             if (target === elements.loadMoreArticlesBtn) { loadMoreArticles(); return; }
             if (target === elements.loadMoreCommentsBtn) { loadMoreComments(); return; }
             if (target === elements.clearCacheBtn) { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
@@ -144,11 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const articleCard = target.closest('[data-id]');
             if (articleCard && (target.closest('#news-list-view') || target.closest('#featured-slider-container'))) {
+                const articleId = articleCard.dataset.id;
                 if (state.isUserAdmin) {
-                    const articleToEdit = state.allArticlesMeta.find(a => a.id == articleCard.dataset.id);
+                    const articleToEdit = state.allArticlesMeta.find(a => a.id == articleId);
                     showEditor(articleToEdit);
                 } else {
-                    window.location.hash = `article-${articleCard.dataset.id}`;
+                    displayArticle(articleId);
                 }
                 window.scrollTo(0, 0);
                 return;
@@ -183,20 +154,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
         elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
-        
-        // GŁÓWNY NASŁUCHIWACZ ZMIANY ADRESU URL
-        window.addEventListener('hashchange', handleRouteChange);
     }
 
     // =================================================================
-    // === 10. INICJALIZACJA APLIKACJI ==================================
+    // === 9. INICJALIZACJA APLIKACJI ==================================
     // =================================================================
 
     function init() {
         state.localUserId = getOrCreateLocalUserId();
         bindEventListeners();
         initializeAuth();
-        loadInitialArticles();
+        
+        // Sprawdź, czy jest deep link na starcie
+        const initialHash = window.location.hash;
+        loadInitialArticles(() => {
+            if (initialHash && initialHash.startsWith('#article-')) {
+                displayArticle(initialHash.substring(9));
+            }
+        });
+
+        // Nasłuchuj przyszłych zmian w URL
+        window.addEventListener('popstate', () => {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#article-')) {
+                displayArticle(hash.substring(9));
+            } else {
+                showMainView();
+            }
+        });
     }
     
     init();
