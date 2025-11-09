@@ -94,6 +94,7 @@ function getOrCreateLocalUserId() {
             deleteButton: document.getElementById('editor-delete'),
         }
     };
+     const shareButton = document.getElementById('share-button'); // POPRAWKA: Dodano brakującą zmienną
 
     // =================================================================
     // === 3. STAN APLIKACJI ===========================================
@@ -762,4 +763,5 @@ function setupShareButton(article) {
 
     init(); // Uruchomienie aplikacji!
 });
+
 
