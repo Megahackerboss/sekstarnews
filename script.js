@@ -149,72 +149,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 function renderComments(comments) {
-    elements.commentSection.list.innerHTML = '';
+    const commentListContainer = elements.commentSection.list;
+    
+    // Stwórz nową listę w pamięci, aby uniknąć migotania
+    const newList = document.createElement('div');
+
     if (comments.length === 0) {
-        elements.commentSection.list.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
-        return;
+        newList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
+    } else {
+        comments.forEach(comment => {
+            const commentEl = document.createElement('div');
+            commentEl.className = 'comment';
+            commentEl.dataset.commentId = comment.commentId;
+
+            let controls = '';
+            if (state.isUserAdmin || comment.userId === state.localUserId) {
+                controls = `
+                    <div class="comment-controls">
+                        <button class="edit-comment-btn">Edytuj</button>
+                        <button class="delete-comment-btn">Usuń</button>
+                    </div>`;
+            }
+
+            commentEl.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${comment.author || 'Anonim'}</span>
+                    <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
+                </div>
+                <p class="comment-message">${comment.message || ''}</p>
+                ${controls}`;
+            
+            newList.appendChild(commentEl);
+        });
     }
 
-    comments.forEach(comment => {
-        const commentEl = document.createElement('div');
-        commentEl.className = 'comment';
-        commentEl.dataset.commentId = comment.commentId; // Dodajemy ID do głównego elementu
+    // Podmień całą zawartość listy komentarzy za jednym razem
+    commentListContainer.innerHTML = '';
+    commentListContainer.appendChild(newList);
+    
+    // --- NOWA, POPRAWIONA LOGIKA NASŁUCHIWANIA ---
+    
+    // Usuń stary nasłuchiwacz, jeśli istnieje, aby uniknąć duplikatów
+    if (commentListContainer.eventListener) {
+        commentListContainer.removeEventListener('click', commentListContainer.eventListener);
+    }
 
-        let controls = '';
-        if (state.isUserAdmin || comment.userId === state.localUserId) {
-            controls = `
-                <div class="comment-controls">
-                    <button class="edit-comment-btn">Edytuj</button>
-                    <button class="delete-comment-btn">Usuń</button>
-                </div>`;
-        }
-        
-        // Podstawowa struktura komentarza
-        commentEl.innerHTML = `
-            <div class="comment-header">
-                <span class="comment-author">${comment.author || 'Anonim'}</span>
-                <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
-            </div>
-            <p class="comment-message">${comment.message || ''}</p>
-            ${controls}`;
-            
-        elements.commentSection.list.appendChild(commentEl);
-    });
-
-    // Używamy delegacji zdarzeń, aby obsłużyć kliknięcia na przyciski
-    elements.commentSection.list.addEventListener('click', (event) => {
+    // Stwórz nową funkcję nasłuchującą
+    const eventHandler = (event) => {
         const target = event.target;
         const commentEl = target.closest('.comment');
         if (!commentEl) return;
 
         const commentId = commentEl.dataset.commentId;
-        const commentData = comments.find(c => c.commentId === commentId);
-
-        // --- Obsługa przycisku "USUŃ" ---
+        
+        // Obsługa przycisku "USUŃ"
         if (target.classList.contains('delete-comment-btn')) {
             if (confirm("Czy na pewno chcesz usunąć ten komentarz?")) {
                 database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove();
             }
         }
 
-        // --- Obsługa przycisku "EDYTUJ" ---
+        // Obsługa przycisku "EDYTUJ"
         if (target.classList.contains('edit-comment-btn')) {
+            const commentData = comments.find(c => c.commentId === commentId);
             const messageP = commentEl.querySelector('.comment-message');
             const controlsDiv = commentEl.querySelector('.comment-controls');
             
-            // Stwórz pole edycji
             const editInput = document.createElement('textarea');
             editInput.className = 'comment-edit-textarea';
             editInput.value = commentData.message;
 
-            // Stwórz przyciski "Zapisz" i "Anuluj"
             const saveBtn = document.createElement('button');
             saveBtn.textContent = 'Zapisz';
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Anuluj';
 
-            // Ukryj starą treść i przyciski, pokaż pole edycji
             messageP.style.display = 'none';
             controlsDiv.style.display = 'none';
             commentEl.appendChild(editInput);
@@ -222,18 +233,14 @@ function renderComments(comments) {
             commentEl.appendChild(cancelBtn);
             editInput.focus();
 
-            // Logika przycisku "ZAPISZ"
             saveBtn.onclick = () => {
                 const newText = editInput.value.trim();
                 if (newText) {
                     database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText);
                 }
-                // Nie musimy nic więcej robić, Firebase sam odświeży widok
             };
 
-            // Logika przycisku "ANULUJ"
             cancelBtn.onclick = () => {
-                // Po prostu przywróć widoczność starych elementów i usuń nowe
                 messageP.style.display = '';
                 controlsDiv.style.display = '';
                 editInput.remove();
@@ -241,7 +248,11 @@ function renderComments(comments) {
                 cancelBtn.remove();
             };
         }
-    });
+    };
+
+    // Dodaj nowy nasłuchiwacz i zapamiętaj go, aby móc go usunąć później
+    commentListContainer.addEventListener('click', eventHandler);
+    commentListContainer.eventListener = eventHandler;
 }
     // Pozostałe funkcje UI (setupFeaturedSlider, displayNewsList, etc.) bez zmian...
     function displayNewsList(articles) { elements.newsList.innerHTML = ''; articles.forEach(article => { const card = document.createElement('div'); card.className = 'article-card'; card.dataset.id = article.id; card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`; elements.newsList.appendChild(card); }); }
@@ -421,3 +432,4 @@ function renderComments(comments) {
 
     init();
 });
+
