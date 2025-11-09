@@ -90,7 +90,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function getOrCreateLocalUserId() { let userId = localStorage.getItem('localUserId'); if (!userId) { userId = `user_${Math.random().toString(36).substr(2, 9)}`; localStorage.setItem('localUserId', userId); } return userId; }
     function setupShareButton(article) { if (!article || !article.id) return; elements.articleDetail.shareButton.onclick = async () => { const shareData = { title: article.title, text: `Sprawdź ten artykuł z Sekstar News: ${article.title}`, url: `${window.location.origin}${window.location.pathname}#article-${article.id}` }; try { if (navigator.share) await navigator.share(shareData); else if (navigator.clipboard) { await navigator.clipboard.writeText(shareData.url); alert('Link skopiowany!'); } else throw new Error('No share API'); } catch (err) { window.prompt("Skopiuj ten link:", shareData.url); } }; }
-    function handleDeepLink() { const hash = window.location.hash; if (hash && hash.startsWith('#article-')) { const articleId = hash.substring(9); displayArticle(articleId); } else { showMainView(); } }
+    // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+function router() {
+    const hash = window.location.hash;
+
+    // Sprawdź, czy URL wskazuje na konkretny artykuł
+    if (hash && hash.startsWith('#article-')) {
+        const articleId = hash.substring(9);
+        // Sprawdź, czy metadane artykułów są już załadowane
+        if (state.allArticlesMeta.length > 0) {
+            displayArticle(articleId);
+        } else {
+            // Jeśli nie, poczekaj chwilę i spróbuj ponownie (na wypadek wejścia z linku)
+            setTimeout(router, 100);
+        }
+    } else {
+        // Jeśli nie ma hasha w linku, zawsze pokazuj stronę główną
+        showMainView();
+    }
+}
     function parseCommentFormatting(text) { let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;'); safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>'); return safeText; }
     
     // =================================================================
@@ -176,15 +194,29 @@ function bindEventListeners() {
     // === 9. INICJALIZACJA APLIKACJI ==================================
     // =================================================================
 
-    function init() {
-        state.localUserId = getOrCreateLocalUserId();
-        bindEventListeners();
-        initializeAuth();
-        loadInitialArticles();
-    }
+    // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+function init() {
+    state.localUserId = getOrCreateLocalUserId();
+    
+    // Ustawiamy nasłuchiwacze zdarzeń
+    bindEventListeners();
+    
+    // Uruchamiamy system uwierzytelniania
+    initializeAuth();
+    
+    // ZACZYNAMY OD NASŁUCHIWANIA ZMIAN W URL
+    // To jest kluczowa zmiana. Router będzie reagował na każdą zmianę.
+    window.addEventListener('hashchange', router);
+
+    // Ładujemy początkowe artykuły. Po ich załadowaniu,
+    // funkcja `loadInitialArticles` wywoła router, aby sprawdzić,
+    // czy na starcie nie powinniśmy wyświetlić jakiegoś artykułu.
+    loadInitialArticles();
+}
     
     init();
 });
+
 
 
 
