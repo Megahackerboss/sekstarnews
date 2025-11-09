@@ -113,13 +113,43 @@
     <div id="user-panel-box">
 
         <!-- === WIDOK DLA UŻYTKOWNIKA ZALOGOWANEGO === -->
-        <div id="user-info-view" class="hidden">
-            <h3>Witaj, <span id="user-info-nick"></span>!</h3>
-            <!-- Ten przycisk będzie widoczny tylko dla admina -->
-            <button id="user-panel-add-article" class="hidden">Dodaj nowy artykuł</button>
-            <button id="user-panel-logout">Wyloguj</button>
-            <button id="user-panel-cancel">Zamknij</button>
+<div id="user-info-view" class="hidden">
+    <h3>Witaj, <span id="user-info-nick"></span>!</h3>
+
+    <!-- Zakładki Profilu -->
+    <div class="profile-tabs">
+        <button id="show-info-tab" class="active">Informacje ogólne</button>
+        <button id="show-perms-tab">Uprawnienia</button>
+    </div>
+
+    <!-- Treść Zakładek -->
+    <div class="profile-content">
+
+        <!-- Zakładka 1: Informacje i edycja -->
+        <div id="profile-info-content">
+            <form id="profile-info-form">
+                <label for="profile-nick-input">Twój Nick:</label>
+                <input type="text" id="profile-nick-input" required>
+
+                <label for="profile-email-input">Twój Email:</label>
+                <input type="email" id="profile-email-input" disabled>
+                
+                <button type="submit" id="profile-save-button">Zapisz zmiany</button>
+            </form>
         </div>
+
+        <!-- Zakładka 2: Uprawnienia (na razie pusta) -->
+        <div id="profile-perms-content" class="hidden">
+            <p>Informacje o uprawnieniach pojawią się tutaj w przyszłości.</p>
+        </div>
+    </div>
+
+    <!-- Przyciski akcji (Dodaj art. i Wyloguj) -->
+    <hr style="border-color: #4a68a5; margin: 20px 0;">
+    <button id="user-panel-add-article" class="hidden">Dodaj nowy artykuł</button>
+    <button id="user-panel-logout">Wyloguj</button>
+    <button id="user-panel-cancel">Zamknij</button>
+</div>
 
         <!-- === WIDOK DLA UŻYTKOWNIKA NIEZALOGOWANEGO === -->
         <div id="auth-view">
