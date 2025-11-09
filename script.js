@@ -70,18 +70,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 5. INTERAKCJE Z FIREBASE =====================================
     // =================================================================
     
-    function loadInitialArticles() {
+   function loadInitialArticles() {
     let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE);
     query.once('value', (snapshot) => {
         const data = snapshot.val();
         if (!data) {
             elements.loadMoreArticlesBtn.classList.add('hidden');
+            // Nawet jeśli nie ma artykułów, musimy sprawdzić, czy nie ma deeplinka do nieistniejącego artykułu
+            handleDeepLink(); 
             return;
         }
         const newArticles = Object.values(data);
         state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999));
         
-        // Zapisujemy ostatnie "order", jeśli artykuły istnieją
         if (state.allArticlesMeta.length > 0) {
             state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order;
         }
@@ -243,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
 
 
 
