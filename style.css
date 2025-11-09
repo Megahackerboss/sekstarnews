@@ -391,6 +391,22 @@ body {
 }
 
 
+#profile-reset-password-button {
+    background-color: transparent;
+    border: 1px solid #4a68a5;
+    color: #aab8d3;
+    font-weight: normal;
+    margin-bottom: 15px; /* Odstęp od przycisku zapisu */
+}
+
+#profile-reset-password-button:hover {
+    background-color: #3a5a8f;
+    color: white;
+}
+
+
+
+
 
 
 
