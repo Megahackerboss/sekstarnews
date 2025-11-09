@@ -28,28 +28,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 2. ELEMENTY DOM =============================================
     // =================================================================
 
-    const elements = {
-        navTitle: document.querySelector('.nav-title'),
-        backButton: document.getElementById('back-button'),
-        adminButton: document.getElementById('admin-button'),
-        adminMenu: { container: document.getElementById('admin-menu'), addButton: document.getElementById('admin-menu-add'), logoutButton: document.getElementById('admin-menu-logout') },
-        views: { main: document.getElementById('main-view'), article: document.getElementById('article-view'), editor: document.getElementById('editor-view'), login: document.getElementById('login-view') },
-        slider: { container: document.getElementById('featured-slider-container') },
-        newsList: document.getElementById('news-list-view'),
-        articleDetail: { date: document.getElementById('article-date'), author: document.getElementById('article-author'), content: document.getElementById('article-content'), likeButton: document.getElementById('like-button'), likeCount: document.getElementById('like-count'), shareButton: document.getElementById('share-button') },
-        commentSection: { form: document.getElementById('comment-form'), nameInput: document.getElementById('comment-name'), messageInput: document.getElementById('comment-message'), list: document.getElementById('comments-list') },
-        loginForm: { emailInput: document.getElementById('login-email'), passwordInput: document.getElementById('login-password'), submitButton: document.getElementById('login-submit'), cancelButton: document.getElementById('login-cancel') },
-        editorForm: { form: document.getElementById('editor-form'), idInput: document.getElementById('editor-id'), orderInput: document.getElementById('editor-order'), dateInput: document.getElementById('editor-date'), titleInput: document.getElementById('editor-title'), authorInput: document.getElementById('editor-author'), thumbnailInput: document.getElementById('editor-thumbnail'), featuredCheckbox: document.getElementById('editor-featured'), contentInput: document.getElementById('editor-content'), cancelButton: document.getElementById('editor-cancel'), deleteButton: document.getElementById('editor-delete') },
-        loadMoreArticlesBtn: document.getElementById('load-more-articles-btn'),
-        loadMoreCommentsBtn: document.getElementById('load-more-comments-btn'),
-        clearCacheBtn: document.getElementById('clear-cache-btn'),
-    };
+   const elements = {
+    navTitle: document.querySelector('.nav-title'),
+    backButton: document.getElementById('back-button'),
+    views: { main: document.getElementById('main-view'), article: document.getElementById('article-view'), editor: document.getElementById('editor-view') },
+    slider: { container: document.getElementById('featured-slider-container') },
+    newsList: document.getElementById('news-list-view'),
+    articleDetail: { date: document.getElementById('article-date'), author: document.getElementById('article-author'), content: document.getElementById('article-content'), likeButton: document.getElementById('like-button'), likeCount: document.getElementById('like-count'), shareButton: document.getElementById('share-button') },
+    commentSection: { form: document.getElementById('comment-form'), nameInput: document.getElementById('comment-name'), messageInput: document.getElementById('comment-message'), list: document.getElementById('comments-list'), formatItalicBtn: document.getElementById('format-italic-btn') },
+    editorForm: { form: document.getElementById('editor-form'), idInput: document.getElementById('editor-id'), orderInput: document.getElementById('editor-order'), dateInput: document.getElementById('editor-date'), titleInput: document.getElementById('editor-title'), authorInput: document.getElementById('editor-author'), thumbnailInput: document.getElementById('editor-thumbnail'), featuredCheckbox: document.getElementById('editor-featured'), contentInput: document.getElementById('editor-content'), cancelButton: document.getElementById('editor-cancel'), deleteButton: document.getElementById('editor-delete') },
+    loadMoreArticlesBtn: document.getElementById('load-more-articles-btn'),
+    loadMoreCommentsBtn: document.getElementById('load-more-comments-btn'),
+    clearCacheBtn: document.getElementById('clear-cache-btn'),
+    
+    // Nowe elementy panelu użytkownika
+    userPanel: {
+        button: document.getElementById('user-panel-button'),
+        view: document.getElementById('user-panel-view'),
+        infoView: document.getElementById('user-info-view'),
+        authView: document.getElementById('auth-view'),
+        nickSpan: document.getElementById('user-info-nick'),
+        addArticleBtn: document.getElementById('user-panel-add-article'),
+        logoutBtn: document.getElementById('user-panel-logout'),
+        cancelBtn: document.getElementById('user-panel-cancel'),
+        showLoginTab: document.getElementById('show-login-tab'),
+        showRegisterTab: document.getElementById('show-register-tab'),
+        loginForm: document.getElementById('login-form'),
+        registerForm: document.getElementById('register-form'),
+        loginEmail: document.getElementById('login-email'),
+        loginPassword: document.getElementById('login-password'),
+        registerNick: document.getElementById('register-nick'),
+        registerEmail: document.getElementById('register-email'),
+        registerPassword: document.getElementById('register-password'),
+        authCancelBtn: document.getElementById('auth-cancel-button')
+    }
+};
 
     // =================================================================
     // === 3. STAN APLIKACJI ===========================================
     // =================================================================
 
-   let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, activeCommentsRef: null, sliderInterval: null, currentSlideIndex: 0, localUserId: null };
+ let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, activeCommentsRef: null, sliderInterval: null, currentSlideIndex: 0, currentUser: null, localUserId: null }; // Zostawiamy localUserId!
     
     // =================================================================
     // === 4. LOGIKA UI (POPRAWIONA) =====================================
@@ -135,15 +154,95 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupLikes(articleId) { const likesRef = database.ref(`articles/${articleId}/likes`); likesRef.on('value', (snapshot) => updateLikeButton(snapshot.val() || 0, articleId)); }
     function addComment(author, message) { if (!state.currentArticle || !state.currentArticle.id || !state.localUserId) return; database.ref(`comments/${state.currentArticle.id}`).push().set({ author, message, userId: state.localUserId, timestamp: firebase.database.ServerValue.TIMESTAMP }); }
 
-    // =================================================================
-    // === 6. UWIERZYTELNIANIE =========================================
-    // =================================================================
-    
-    function initializeAuth() { auth.onAuthStateChanged(user => { state.isUserAdmin = user && !user.isAnonymous; elements.adminButton.textContent = state.isUserAdmin ? "≡" : "?"; if (!user) auth.signInAnonymously().catch(err => console.error("Błąd logowania anonimowego:", err)); }); }
-    function handleAdminLogin() { const email = elements.loginForm.emailInput.value; const pass = elements.loginForm.passwordInput.value; auth.signInWithEmailAndPassword(email, pass).then(() => showMainView()).catch(err => alert(`Błąd logowania: ${err.message}`)); }
+// =================================================================
+// === 6. UWIERZYTELNIANIE I ZARZĄDZANIE UŻYTKOWNIKIEM =============
+// =================================================================
 
+const ADMIN_UID = '9T148rWC4lOnwBKTtPg9B24Ns1F3'; // UUID Admina
+
+function initializeAuth() {
+    auth.onAuthStateChanged(async (user) => {
+        if (user && !user.isAnonymous) { // Ignorujemy anonimowe logowanie
+            // Użytkownik jest zalogowany
+            const userProfileRef = database.ref(`users/${user.uid}`);
+            const snapshot = await userProfileRef.once('value');
+            const profile = snapshot.val();
+
+            state.currentUser = {
+                uid: user.uid,
+                email: user.email,
+                nick: profile ? profile.nick : 'Użytkownik'
+            };
+            state.isUserAdmin = user.uid === ADMIN_UID;
+        } else {
+            // Użytkownik jest wylogowany
+            state.currentUser = null;
+            state.isUserAdmin = false;
+        }
+        updateUserUI(); // Zaktualizuj interfejs na podstawie stanu logowania
+    });
+}
+
+function handleRegistration(e) {
+    e.preventDefault();
+    const nick = elements.userPanel.registerNick.value;
+    const email = elements.userPanel.registerEmail.value;
+    const password = elements.userPanel.registerPassword.value;
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+            const uid = userCredential.user.uid;
+            database.ref(`users/${uid}`).set({
+                nick: nick,
+                email: email
+            });
+            elements.userPanel.view.classList.add('hidden');
+        })
+        .catch(error => {
+            alert(`Błąd rejestracji: ${error.message}`);
+        });
+}
+
+function handleLogin(e) {
+    e.preventDefault();
+    const email = elements.userPanel.loginEmail.value;
+    const password = elements.userPanel.loginPassword.value;
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+            elements.userPanel.view.classList.add('hidden');
+        })
+        .catch(error => {
+            alert(`Błąd logowania: ${error.message}`);
+        });
+}
+
+function handleLogout() {
+    auth.signOut();
+    elements.userPanel.view.classList.add('hidden');
+}
+
+// Funkcja aktualizująca wygląd interfejsu w zależności od stanu logowania
+function updateUserUI() {
+    if (state.currentUser) {
+        elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
+        elements.userPanel.nickSpan.textContent = state.currentUser.nick;
+        elements.userPanel.infoView.classList.remove('hidden');
+        elements.userPanel.authView.classList.add('hidden');
+        
+        if (state.isUserAdmin) {
+            elements.userPanel.addArticleBtn.classList.remove('hidden');
+        } else {
+            elements.userPanel.addArticleBtn.classList.add('hidden');
+        }
+    } else {
+        elements.userPanel.button.textContent = '?';
+        elements.userPanel.infoView.classList.add('hidden');
+        elements.userPanel.authView.classList.remove('hidden');
+    }
+}
     // =================================================================
-    // === 7. FUNKCJE POMOCNICZE ========================================
+    // ====== 7. punkt ================================================
     // =================================================================
     
     function getOrCreateLocalUserId() { let userId = localStorage.getItem('localUserId'); if (!userId) { userId = `user_${Math.random().toString(36).substr(2, 9)}`; localStorage.setItem('localUserId', userId); } return userId; }
@@ -174,11 +273,46 @@ document.addEventListener('DOMContentLoaded', () => {
             if (target.id === 'clear-cache-btn') { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
 
             // --- Logowanie i panel admina ---
-            if (target.id === 'admin-button' || target.closest('#admin-button')) { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
-            if (target.id === 'admin-menu-add') { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
-            if (target.id === 'admin-menu-logout') { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
-            if (target.id === 'login-submit') { handleAdminLogin(); return; }
-            if (target.id === 'login-cancel') { showMainView(); return; }
+            // Wewnątrz funkcji bindEventListeners()
+
+// --- Logowanie i panel admina ---
+if (target.id === 'user-panel-button' || target.closest('#user-panel-button')) {
+    elements.userPanel.view.classList.remove('hidden');
+    return;
+}
+if (target.id === 'user-panel-add-article') {
+    showEditor(null);
+    elements.userPanel.view.classList.add('hidden');
+    return;
+}
+if (target.id === 'user-panel-logout') {
+    handleLogout();
+    return;
+}
+if (target.id === 'user-panel-cancel' || target.id === 'auth-cancel-button') {
+    elements.userPanel.view.classList.add('hidden');
+    return;
+}
+if (target.id === 'show-login-tab') {
+    elements.userPanel.loginForm.classList.remove('hidden');
+    elements.userPanel.registerForm.classList.add('hidden');
+    elements.userPanel.showLoginTab.classList.add('active');
+    elements.userPanel.showRegisterTab.classList.remove('active');
+    return;
+}
+if (target.id === 'show-register-tab') {
+    elements.userPanel.loginForm.classList.add('hidden');
+    elements.userPanel.registerForm.classList.remove('hidden');
+    elements.userPanel.showLoginTab.classList.remove('active');
+    elements.userPanel.showRegisterTab.classList.add('active');
+    return;
+}
+
+// Wewnątrz `bindEventListeners()`, znajdź sekcję `// --- Zdarzenia formularzy i inne ---`
+// I dodaj na jej początku obsługę nowych formularzy
+
+elements.userPanel.loginForm.addEventListener('submit', handleLogin);
+elements.userPanel.registerForm.addEventListener('submit', handleRegistration);
 
             // --- Edytor Artykułów ---
             if (target.id === 'editor-cancel') { showMainView(); return; }
@@ -226,6 +360,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // --- Zdarzenia formularzy i inne ---
+        elements.userPanel.loginForm.addEventListener('submit', handleLogin);
+        elements.userPanel.registerForm.addEventListener('submit', handleRegistration);
         elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
         elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
         window.addEventListener('hashchange', handleDeepLink);
@@ -244,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
 
 
 
