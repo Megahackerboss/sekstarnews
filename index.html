@@ -104,20 +104,46 @@
         </form>
     </div>
 <!-- Nowy, zunifikowany Panel Admina -->
-<button id="admin-button">?</button>
+<!-- =============================================== -->
+<!-- === NOWY, UNIWERSALNY PANEL UŻYTKOWNIKA ======= -->
+<!-- =============================================== -->
+<button id="user-panel-button">?</button>
 
-<div id="admin-menu" class="hidden">
-  <button id="admin-menu-add">Dodaj nowy artykuł</button>
-  <button id="admin-menu-logout">Wyloguj</button>
-</div>
+<div id="user-panel-view" class="hidden">
+    <div id="user-panel-box">
 
-<div id="login-view" class="hidden">
-    <div id="login-box">
-        <h2>Logowanie Admina</h2>
-        <input type="email" id="login-email" placeholder="Email">
-        <input type="password" id="login-password" placeholder="Hasło">
-        <button id="login-submit">Zaloguj</button>
-        <button id="login-cancel">Anuluj</button>
+        <!-- === WIDOK DLA UŻYTKOWNIKA ZALOGOWANEGO === -->
+        <div id="user-info-view" class="hidden">
+            <h3>Witaj, <span id="user-info-nick"></span>!</h3>
+            <!-- Ten przycisk będzie widoczny tylko dla admina -->
+            <button id="user-panel-add-article" class="hidden">Dodaj nowy artykuł</button>
+            <button id="user-panel-logout">Wyloguj</button>
+            <button id="user-panel-cancel">Zamknij</button>
+        </div>
+
+        <!-- === WIDOK DLA UŻYTKOWNIKA NIEZALOGOWANEGO === -->
+        <div id="auth-view">
+            <div class="auth-tabs">
+                <button id="show-login-tab" class="active">Logowanie</button>
+                <button id="show-register-tab">Rejestracja</button>
+            </div>
+
+            <!-- Formularz Logowania -->
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Hasło" required>
+                <button type="submit">Zaloguj</button>
+            </form>
+
+            <!-- Formularz Rejestracji -->
+            <form id="register-form" class="hidden">
+                <input type="text" id="register-nick" placeholder="Nick" required>
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Hasło" required>
+                <button type="submit">Zarejestruj</button>
+            </form>
+             <button id="auth-cancel-button">Anuluj</button>
+        </div>
     </div>
 </div>
 
