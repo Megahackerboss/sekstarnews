@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 function bindEventListeners() {
     // --- GŁÓWNY, INTELIGENTNY NASŁUCHIWACZ KLIKNIĘĆ ---
     document.body.addEventListener('click', (event) => {
@@ -105,8 +106,9 @@ function bindEventListeners() {
         
         // --- Nawigacja i przyciski ogólne ---
         if (target.id === 'back-button' || target.closest('#back-button')) {
-            if (state.commentsListener) state.commentsListener.off();
-            showMainView(); // NAPRAWIONE: Bezpośrednie wywołanie
+            // NAPRAWIONE: Teraz przycisk tylko i wyłącznie zmienia adres URL.
+            // Resztą zajmie się nasłuchiwacz 'hashchange'.
+            window.location.hash = '';
             return;
         }
         if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
@@ -118,16 +120,17 @@ function bindEventListeners() {
         if (target.id === 'admin-menu-add') { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
         if (target.id === 'admin-menu-logout') { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
         if (target.id === 'login-submit') { handleAdminLogin(); return; }
-        if (target.id === 'login-cancel') { showMainView(); return; } // NAPRAWIONE: Po anulowaniu wraca do widoku głównego
+        if (target.id === 'login-cancel') { showMainView(); return; }
 
         // --- Edytor Artykułów ---
-        if (target.id === 'editor-cancel') { showMainView(); return; } // NAPRAWIONE: Po anulowaniu wraca do widoku głównego
-        if (target.id === 'editor-delete') { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showMainView(); }); } return; } // NAPRAWIONE: Po usunięciu wraca do widoku głównego
+        if (target.id === 'editor-cancel') { showMainView(); return; }
+        if (target.id === 'editor-delete') { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showMainView(); }); } return; }
 
         // --- Kliknięcie na artykuł ---
         const articleCard = target.closest('[data-id]');
         if (articleCard) {
-            window.location.hash = `article-${articleCard.dataset.id}`; // Zmieniamy hash, aby `hashchange` zadziałał
+            // Kliknięcie na artykuł tylko zmienia adres URL.
+            window.location.hash = `article-${articleCard.dataset.id}`;
             window.scrollTo(0, 0);
             return;
         }
@@ -166,11 +169,7 @@ function bindEventListeners() {
     elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
     
     // NAPRAWIONY NASŁUCHIWACZ ZMIANY ADRESU URL
-    window.addEventListener('hashchange', () => {
-        if (state.allArticlesMeta.length > 0) {
-            handleDeepLink();
-        }
-    });
+    window.addEventListener('hashchange', handleDeepLink);
 }
 
     // =================================================================
@@ -186,5 +185,6 @@ function bindEventListeners() {
     
     init();
 });
+
 
 
