@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 3. STAN APLIKACJI ===========================================
     // =================================================================
 
-    let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, commentsListener: null, sliderInterval: null, currentSlideIndex: 0, localUserId: null };
+   let state = { allArticlesMeta: [], lastLoadedArticleOrder: null, areAllArticlesLoaded: false, allComments: [], displayedComments: [], areAllCommentsLoaded: false, currentArticle: null, isUserAdmin: false, activeCommentsRef: null, sliderInterval: null, currentSlideIndex: 0, localUserId: null };
     
     // =================================================================
     // === 4. LOGIKA UI (POPRAWIONA) =====================================
@@ -72,7 +72,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function loadInitialArticles() { let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE); query.once('value', (snapshot) => { const data = snapshot.val(); if (!data) { elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order; displayNewsList(state.allArticlesMeta); const featured = state.allArticlesMeta.filter(a => a.featured); setupFeaturedSlider(featured); if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } else { elements.loadMoreArticlesBtn.classList.remove('hidden'); } handleDeepLink(); }); }
     function loadMoreArticles() { if (state.areAllArticlesLoaded) return; elements.loadMoreArticlesBtn.disabled = true; elements.loadMoreArticlesBtn.textContent = 'Ładowanie...'; let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE); query.once('value', snapshot => { const data = snapshot.val(); if (!data || Object.keys(data).length === 0) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.allArticlesMeta.push(...newArticles); state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order; displayNewsList(state.allArticlesMeta); elements.loadMoreArticlesBtn.disabled = false; elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej'; if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } }); }
-    function listenForComments(articleId) { if (state.commentsListener) state.commentsListener.off(); state.allComments = []; state.areAllCommentsLoaded = false; elements.loadMoreCommentsBtn.classList.add('hidden'); const commentsRef = database.ref(`comments/${articleId}`); state.commentsListener = commentsRef.on('value', (snapshot) => { const data = snapshot.val(); state.allComments = data ? Object.entries(data).map(([key, val]) => ({ ...val, commentId: key })).sort((a,b) => b.timestamp - a.timestamp) : []; const initialComments = state.allComments.slice(0, COMMENTS_PER_PAGE); renderComments(initialComments); if (state.allComments.length > COMMENTS_PER_PAGE) { elements.loadMoreCommentsBtn.classList.remove('hidden'); } else { elements.loadMoreCommentsBtn.classList.add('hidden'); } }); }
+    function function listenForComments(articleId) {
+    // Jeśli mamy aktywną referencję do komentarzy z POPRZEDNIEGO artykułu, wyłączamy nasłuchiwanie.
+    if (state.activeCommentsRef) {
+        state.activeCommentsRef.off();
+    }
+
+    state.allComments = [];
+    state.areAllCommentsLoaded = false;
+    elements.loadMoreCommentsBtn.classList.add('hidden');
+    
+    // Tworzymy nową referencję i ZAPISUJEMY JĄ w stanie aplikacji
+    const newCommentsRef = database.ref(`comments/${articleId}`);
+    state.activeCommentsRef = newCommentsRef; // <-- Kluczowa zmiana!
+
+    // Używamy nowej referencji do nasłuchiwania
+    newCommentsRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        state.allComments = data ? Object.entries(data).map(([key, val]) => ({ ...val, commentId: key })).sort((a,b) => b.timestamp - a.timestamp) : [];
+        const initialComments = state.allComments.slice(0, COMMENTS_PER_PAGE);
+        renderComments(initialComments);
+        if (state.allComments.length > COMMENTS_PER_PAGE) {
+            elements.loadMoreCommentsBtn.classList.remove('hidden');
+        } else {
+            elements.loadMoreCommentsBtn.classList.add('hidden');
+        }
+    });
+}
     function loadMoreComments() { const currentlyShown = document.querySelectorAll('#comments-list .comment').length; const nextComments = state.allComments.slice(0, currentlyShown + COMMENTS_PER_PAGE); renderComments(nextComments); if (nextComments.length >= state.allComments.length) { elements.loadMoreCommentsBtn.classList.add('hidden'); } }
     function setupLikes(articleId) { const likesRef = database.ref(`articles/${articleId}/likes`); likesRef.on('value', (snapshot) => updateLikeButton(snapshot.val() || 0, articleId)); }
     function addComment(author, message) { if (!state.currentArticle || !state.currentArticle.id || !state.localUserId) return; database.ref(`comments/${state.currentArticle.id}`).push().set({ author, message, userId: state.localUserId, timestamp: firebase.database.ServerValue.TIMESTAMP }); }
@@ -102,9 +128,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const target = event.target;
             
             // --- Główne przyciski i nawigacja ---
-            if (target.id === 'back-button' || target.closest('#back-button')) {
-    if (state.commentsListener) state.commentsListener.off();
-    showMainView(); // <-- ZMIANA: Bezpośrednie wywołanie funkcji
+        if (target.id === 'back-button' || target.closest('#back-button')) {
+    // Sprawdzamy, czy istnieje aktywna referencja i wyłączamy nasłuchiwanie
+    if (state.activeCommentsRef) {
+        state.activeCommentsRef.off();
+        state.activeCommentsRef = null; // Czyścimy stan po powrocie
+    }
+    showMainView();
     return;
 }
             if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
@@ -187,4 +217,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
 
