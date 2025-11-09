@@ -325,6 +325,24 @@ body {
 .auth-tabs button.active { background-color: #4a68a5; }
 #auth-cancel-button { background-color: #555; }
 
+/* Zastąp stary styl lub dodaj ten */
+#user-panel-button {
+    position: fixed;
+    top: 15px; /* Zamiast bottom */
+    right: 20px; /* Dopasowane do paddingu nawigacji */
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background-color: #4a68a5;
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 101; /* Wyżej niż nawigacja */
+    text-align: center;
+    line-height: 36px;
+}
 
 
 
