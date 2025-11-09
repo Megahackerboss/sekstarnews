@@ -363,15 +363,11 @@ function renderComments(comments) {
     }
 
     // Wklej to w sekcji 7. FUNKCJE POMOCNICZE
+// ZASTĄP STARĄ WERSJĘ TĄ NOWĄ:
 function parseCommentFormatting(text) {
     // Prosty escape, aby zapobiec wstrzykiwaniu HTML przez użytkownika
     let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    // Kolejność jest ważna: od najbardziej złożonych do najprostszych
-    // ***Pogrubienie i kursywa*** -> <b><i>...</i></b>
-    safeText = safeText.replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>');
-    // **Pogrubienie** -> <b>...</b>
-    safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     // *Kursywa* -> <i>...</i>
     safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>');
 
@@ -443,7 +439,6 @@ function wrapTextInFormat(syntax) {
         });
         
         window.addEventListener('hashchange', handleDeepLink);
-        document.getElementById('format-bold-btn').addEventListener('click', () => wrapTextInFormat('**'));
         document.getElementById('format-italic-btn').addEventListener('click', () => wrapTextInFormat('*'));
     }
 
@@ -463,5 +458,6 @@ function wrapTextInFormat(syntax) {
 
     init();
 });
+
 
 
