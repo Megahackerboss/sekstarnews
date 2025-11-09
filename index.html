@@ -106,18 +106,39 @@
 <!-- Nowy, zunifikowany Panel Admina -->
 <button id="admin-button">?</button>
 
-<div id="admin-menu" class="hidden">
-  <button id="admin-menu-add">Dodaj nowy artykuł</button>
-  <button id="admin-menu-logout">Wyloguj</button>
+<!-- Menu Użytkownika (widoczne po zalogowaniu) -->
+<div id="user-menu" class="hidden">
+  <button id="user-menu-profile">Mój Profil</button>
+  <!-- Przyciski dla adminów będą dodawane dynamicznie przez JS -->
+  <button id="user-menu-logout">Wyloguj</button>
 </div>
 
-<div id="login-view" class="hidden">
-    <div id="login-box">
-        <h2>Logowanie Admina</h2>
-        <input type="email" id="login-email" placeholder="Email">
-        <input type="password" id="login-password" placeholder="Hasło">
-        <button id="login-submit">Zaloguj</button>
-        <button id="login-cancel">Anuluj</button>
+<!-- Nowy Panel Logowania i Rejestracji -->
+<div id="auth-view" class="hidden">
+    <div id="auth-box">
+        <div class="auth-tabs">
+            <button id="auth-tab-login" class="active">Logowanie</button>
+            <button id="auth-tab-register">Rejestracja</button>
+        </div>
+        
+        <!-- Formularz Logowania -->
+        <form id="login-form">
+            <h2>Logowanie</h2>
+            <input type="email" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-password" placeholder="Hasło" required>
+            <button type="submit" id="login-submit">Zaloguj</button>
+        </form>
+
+        <!-- Formularz Rejestracji -->
+        <form id="register-form" class="hidden">
+            <h2>Rejestracja</h2>
+            <input type="text" id="register-nick" placeholder="Nick" required>
+            <input type="email" id="register-email" placeholder="Email" required>
+            <input type="password" id="register-password" placeholder="Hasło" required>
+            <button type="submit" id="register-submit">Zarejestruj</button>
+        </form>
+        
+        <button id="auth-cancel">Anuluj</button>
     </div>
 </div>
 
