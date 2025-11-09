@@ -150,82 +150,74 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
+// ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 function renderComments(comments) {
-    const commentListContainer = elements.commentSection.list;
-    
-    // Stwórz nową listę w pamięci, aby uniknąć migotania
-    const newList = document.createElement('div');
-
+    elements.commentSection.list.innerHTML = '';
     if (comments.length === 0) {
-        newList.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
-    } else {
-        comments.forEach(comment => {
-            const commentEl = document.createElement('div');
-            commentEl.className = 'comment';
-            commentEl.dataset.commentId = comment.commentId;
+        elements.commentSection.list.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
+        return;
+    }
 
-            let controls = '';
-            if (state.isUserAdmin || comment.userId === state.localUserId) {
-                controls = `
-                    <div class="comment-controls">
-                        <button class="edit-comment-btn">Edytuj</button>
-                        <button class="delete-comment-btn">Usuń</button>
-                    </div>`;
-            }
+    comments.forEach(comment => {
+        const commentEl = document.createElement('div');
+        commentEl.className = 'comment';
+        commentEl.dataset.commentId = comment.commentId; // Dodajemy ID do głównego elementu
 
-            commentEl.innerHTML = `
-                <div class="comment-header">
-                    <span class="comment-author">${comment.author || 'Anonim'}</span>
-                    <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
-                </div>
-                <p class="comment-message">${comment.message || ''}</p>
-                ${controls}`;
+        let controls = '';
+        if (state.isUserAdmin || comment.userId === state.localUserId) {
+            controls = `
+                <div class="comment-controls">
+                    <button class="edit-comment-btn">Edytuj</button>
+                    <button class="delete-comment-btn">Usuń</button>
+                </div>`;
+        }
+        
+        // Podstawowa struktura komentarza
+        commentEl.innerHTML = `
+            <div class="comment-header">
+                <span class="comment-author">${comment.author || 'Anonim'}</span>
+                <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
+            </div>
+            <p class="comment-message">${comment.message || ''}</p>
+            ${controls}`;
             
-            newList.appendChild(commentEl);
-        });
-    }
+        elements.commentSection.list.appendChild(commentEl);
+    });
 
-    // Podmień całą zawartość listy komentarzy za jednym razem
-    commentListContainer.innerHTML = '';
-    commentListContainer.appendChild(newList);
-    
-    // --- NOWA, POPRAWIONA LOGIKA NASŁUCHIWANIA ---
-    
-    // Usuń stary nasłuchiwacz, jeśli istnieje, aby uniknąć duplikatów
-    if (commentListContainer.eventListener) {
-        commentListContainer.removeEventListener('click', commentListContainer.eventListener);
-    }
-
-    // Stwórz nową funkcję nasłuchującą
-    const eventHandler = (event) => {
+    // Używamy delegacji zdarzeń, aby obsłużyć kliknięcia na przyciski
+    elements.commentSection.list.addEventListener('click', (event) => {
         const target = event.target;
         const commentEl = target.closest('.comment');
         if (!commentEl) return;
 
         const commentId = commentEl.dataset.commentId;
-        
-        // Obsługa przycisku "USUŃ"
+        const commentData = comments.find(c => c.commentId === commentId);
+
+        // --- Obsługa przycisku "USUŃ" ---
         if (target.classList.contains('delete-comment-btn')) {
             if (confirm("Czy na pewno chcesz usunąć ten komentarz?")) {
                 database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove();
             }
         }
 
-        // Obsługa przycisku "EDYTUJ"
+        // --- Obsługa przycisku "EDYTUJ" ---
         if (target.classList.contains('edit-comment-btn')) {
-            const commentData = comments.find(c => c.commentId === commentId);
             const messageP = commentEl.querySelector('.comment-message');
             const controlsDiv = commentEl.querySelector('.comment-controls');
             
+            // Stwórz pole edycji
             const editInput = document.createElement('textarea');
             editInput.className = 'comment-edit-textarea';
             editInput.value = commentData.message;
 
+            // Stwórz przyciski "Zapisz" i "Anuluj"
             const saveBtn = document.createElement('button');
             saveBtn.textContent = 'Zapisz';
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Anuluj';
 
+            // Ukryj starą treść i przyciski, pokaż pole edycji
             messageP.style.display = 'none';
             controlsDiv.style.display = 'none';
             commentEl.appendChild(editInput);
@@ -233,14 +225,18 @@ function renderComments(comments) {
             commentEl.appendChild(cancelBtn);
             editInput.focus();
 
+            // Logika przycisku "ZAPISZ"
             saveBtn.onclick = () => {
                 const newText = editInput.value.trim();
                 if (newText) {
                     database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText);
                 }
+                // Nie musimy nic więcej robić, Firebase sam odświeży widok
             };
 
+            // Logika przycisku "ANULUJ"
             cancelBtn.onclick = () => {
+                // Po prostu przywróć widoczność starych elementów i usuń nowe
                 messageP.style.display = '';
                 controlsDiv.style.display = '';
                 editInput.remove();
@@ -248,11 +244,7 @@ function renderComments(comments) {
                 cancelBtn.remove();
             };
         }
-    };
-
-    // Dodaj nowy nasłuchiwacz i zapamiętaj go, aby móc go usunąć później
-    commentListContainer.addEventListener('click', eventHandler);
-    commentListContainer.eventListener = eventHandler;
+    });
 }
 
     // Używamy delegacji zdarzeń, aby obsłużyć kliknięcia na przyciski
@@ -494,5 +486,6 @@ function renderComments(comments) {
 
     init();
 });
+
 
 
