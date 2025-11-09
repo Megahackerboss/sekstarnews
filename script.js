@@ -60,7 +60,15 @@ document.addEventListener('DOMContentLoaded', () => {
         registerNick: document.getElementById('register-nick'),
         registerEmail: document.getElementById('register-email'),
         registerPassword: document.getElementById('register-password'),
-        authCancelBtn: document.getElementById('auth-cancel-button')
+        authCancelBtn: document.getElementById('auth-cancel-button'),
+            // DODAJ TE NOWE ELEMENTY
+        showInfoTab: document.getElementById('show-info-tab'),
+        showPermsTab: document.getElementById('show-perms-tab'),
+        profileInfoContent: document.getElementById('profile-info-content'),
+        profilePermsContent: document.getElementById('profile-perms-content'),
+        profileInfoForm: document.getElementById('profile-info-form'),
+        profileNickInput: document.getElementById('profile-nick-input'),
+        profileEmailInput: document.getElementById('profile-email-input')
     }
 };
 
@@ -221,14 +229,40 @@ function handleLogout() {
     auth.signOut();
     elements.userPanel.view.classList.add('hidden');
 }
+    function handleProfileUpdate(e) {
+    e.preventDefault();
+    const newNick = elements.userPanel.profileNickInput.value.trim();
+
+    if (!newNick) {
+        alert("Nick nie może być pusty.");
+        return;
+    }
+    
+    if (state.currentUser && state.currentUser.uid) {
+        database.ref(`users/${state.currentUser.uid}`).update({ nick: newNick })
+            .then(() => {
+                // Zaktualizuj nick w stanie lokalnym
+                state.currentUser.nick = newNick;
+                // Odśwież interfejs
+                updateUserUI();
+                alert("Zapisano zmiany!");
+            })
+            .catch(error => alert(`Błąd: ${error.message}`));
+    }
+}
 
 // Funkcja aktualizująca wygląd interfejsu w zależności od stanu logowania
+// Zastąp starą funkcję updateUserUI tą nową
 function updateUserUI() {
     if (state.currentUser) {
         elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
         elements.userPanel.nickSpan.textContent = state.currentUser.nick;
         elements.userPanel.infoView.classList.remove('hidden');
         elements.userPanel.authView.classList.add('hidden');
+
+        // Wypełnij pola formularza profilu
+        elements.userPanel.profileNickInput.value = state.currentUser.nick;
+        elements.userPanel.profileEmailInput.value = state.currentUser.email;
         
         if (state.isUserAdmin) {
             elements.userPanel.addArticleBtn.classList.remove('hidden');
@@ -275,44 +309,61 @@ function updateUserUI() {
             // --- Logowanie i panel admina ---
             // Wewnątrz funkcji bindEventListeners()
 
-// --- Logowanie i panel admina ---
-if (target.id === 'user-panel-button' || target.closest('#user-panel-button')) {
-    elements.userPanel.view.classList.remove('hidden');
-    return;
-}
-if (target.id === 'user-panel-add-article') {
-    showEditor(null);
-    elements.userPanel.view.classList.add('hidden');
-    return;
-}
-if (target.id === 'user-panel-logout') {
-    handleLogout();
-    return;
-}
-if (target.id === 'user-panel-cancel' || target.id === 'auth-cancel-button') {
-    elements.userPanel.view.classList.add('hidden');
-    return;
-}
-if (target.id === 'show-login-tab') {
-    elements.userPanel.loginForm.classList.remove('hidden');
-    elements.userPanel.registerForm.classList.add('hidden');
-    elements.userPanel.showLoginTab.classList.add('active');
-    elements.userPanel.showRegisterTab.classList.remove('active');
-    return;
-}
-if (target.id === 'show-register-tab') {
-    elements.userPanel.loginForm.classList.add('hidden');
-    elements.userPanel.registerForm.classList.remove('hidden');
-    elements.userPanel.showLoginTab.classList.remove('active');
-    elements.userPanel.showRegisterTab.classList.add('active');
-    return;
-}
-
-// Wewnątrz `bindEventListeners()`, znajdź sekcję `// --- Zdarzenia formularzy i inne ---`
-// I dodaj na jej początku obsługę nowych formularzy
-
-elements.userPanel.loginForm.addEventListener('submit', handleLogin);
-elements.userPanel.registerForm.addEventListener('submit', handleRegistration);
+// --- Panel Użytkownika, Logowanie i Rejestracja ---
+            if (target.id === 'user-panel-button' || target.closest('#user-panel-button')) {
+                elements.userPanel.view.classList.remove('hidden');
+                // Przy otwarciu panelu zawsze wracaj do domyślnej zakładki
+                if (state.currentUser) {
+                    elements.userPanel.profileInfoContent.classList.remove('hidden');
+                    elements.userPanel.profilePermsContent.classList.add('hidden');
+                    elements.userPanel.showInfoTab.classList.add('active');
+                    elements.userPanel.showPermsTab.classList.remove('active');
+                }
+                return;
+            }
+            if (target.id === 'user-panel-add-article') {
+                showEditor(null);
+                elements.userPanel.view.classList.add('hidden');
+                return;
+            }
+            if (target.id === 'user-panel-logout') {
+                handleLogout();
+                return;
+            }
+            if (target.id === 'user-panel-cancel' || target.id === 'auth-cancel-button') {
+                elements.userPanel.view.classList.add('hidden');
+                return;
+            }
+            // Obsługa zakładek Logowanie / Rejestracja
+            if (target.id === 'show-login-tab') {
+                elements.userPanel.loginForm.classList.remove('hidden');
+                elements.userPanel.registerForm.classList.add('hidden');
+                elements.userPanel.showLoginTab.classList.add('active');
+                elements.userPanel.showRegisterTab.classList.remove('active');
+                return;
+            }
+            if (target.id === 'show-register-tab') {
+                elements.userPanel.loginForm.classList.add('hidden');
+                elements.userPanel.registerForm.classList.remove('hidden');
+                elements.userPanel.showLoginTab.classList.remove('active');
+                elements.userPanel.showRegisterTab.classList.add('active');
+                return;
+            }
+            // NOWA SEKCJA: Obsługa zakładek Profilu (Informacje / Uprawnienia)
+            if (target.id === 'show-info-tab') {
+                elements.userPanel.profileInfoContent.classList.remove('hidden');
+                elements.userPanel.profilePermsContent.classList.add('hidden');
+                elements.userPanel.showInfoTab.classList.add('active');
+                elements.userPanel.showPermsTab.classList.remove('active');
+                return;
+            }
+            if (target.id === 'show-perms-tab') {
+                elements.userPanel.profileInfoContent.classList.add('hidden');
+                elements.userPanel.profilePermsContent.classList.remove('hidden');
+                elements.userPanel.showInfoTab.classList.remove('active');
+                elements.userPanel.showPermsTab.classList.add('active');
+                return;
+            }
 
             // --- Edytor Artykułów ---
             if (target.id === 'editor-cancel') { showMainView(); return; }
@@ -360,6 +411,7 @@ elements.userPanel.registerForm.addEventListener('submit', handleRegistration);
         });
 
         // --- Zdarzenia formularzy i inne ---
+        elements.userPanel.profileInfoForm.addEventListener('submit', handleProfileUpdate);
         elements.userPanel.loginForm.addEventListener('submit', handleLogin);
         elements.userPanel.registerForm.addEventListener('submit', handleRegistration);
         elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
@@ -380,6 +432,7 @@ elements.userPanel.registerForm.addEventListener('submit', handleRegistration);
     
     init();
 });
+
 
 
 
