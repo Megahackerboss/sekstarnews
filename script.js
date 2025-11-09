@@ -92,15 +92,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 3. STAN APLIKACJI ===========================================
     // =================================================================
 
-    let state = {
-        allArticles: [],
-        currentArticle: null,
-        isUserAdmin: false,
-        commentsListener: null,
-        sliderInterval: null,
-        currentSlideIndex: 0,
-        localUserId: null,
-    };
+    // ZASTĄP CAŁĄ ZAWARTOŚĆ OBIEKTU 'state'
+let state = {
+    allArticlesMeta: [], // Przechowuje tylko lekkie metadane artykułów
+    displayedArticles: [],
+    lastLoadedArticleOrder: null,
+    areAllArticlesLoaded: false,
+    
+    displayedComments: [],
+    lastLoadedCommentKey: null, // Używamy klucza do paginacji komentarzy
+    areAllCommentsLoaded: false,
+
+    currentArticle: null,
+    isUserAdmin: false,
+    commentsListener: null,
+    sliderInterval: null,
+    currentSlideIndex: 0,
+    localUserId: null,
+};
 
     // =================================================================
     // === 4. LOGIKA UI ================================================
@@ -120,33 +129,67 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.location.hash) window.location.hash = '';
     }
     
-    function displayArticle(articleId) {
-        const article = state.allArticles.find(a => a.id == articleId);
-        if (!article) {
-            console.error(`DIAGNOSTYKA: Nie znaleziono artykułu o ID: ${articleId}`);
+    // ZASTĄP TĘ FUNKCJĘ
+async function displayArticle(articleId) {
+    // Znajdź metadane w już załadowanych danych
+    let articleMeta = state.allArticlesMeta.find(a => a.id == articleId);
+
+    // Jeśli metadanych nie ma, pobierz je jednorazowo z serwera
+    if (!articleMeta) {
+        try {
+            const snapshot = await database.ref(`articles_meta/${articleId}`).once('value');
+            articleMeta = snapshot.val();
+            if (!articleMeta) { showMainView(); return; }
+            state.allArticlesMeta.push(articleMeta); // Dodaj do naszej listy na przyszłość
+        } catch (error) {
+            console.error("Nie udało się pobrać metadanych artykułu:", error);
             showMainView();
             return;
         }
-        
-        state.currentArticle = article;
-        // DIAGNOSTYKA
-        console.log("DIAGNOSTYKA: Wyświetlono artykuł. Stan 'currentArticle' ustawiony na:", state.currentArticle);
-        
-        if (state.commentsListener) state.commentsListener.off();
-
-        elements.articleDetail.date.textContent = article.date;
-        elements.articleDetail.author.textContent = `Autor: ${article.author}`;
-        elements.articleDetail.content.innerHTML = article.content;
-
-        showView(elements.views.article);
-        elements.backButton.classList.remove('hidden');
-        elements.navTitle.style.marginLeft = '0px';
-        clearInterval(state.sliderInterval);
-
-        setupLikes(article.id);
-        listenForComments(article.id);
-        setupShareButton(article);
     }
+
+    state.currentArticle = articleMeta;
+    if (state.commentsListener) state.commentsListener.off();
+
+    // Wypełnij metadane od razu
+    elements.articleDetail.date.textContent = articleMeta.date;
+    elements.articleDetail.author.textContent = `Autor: ${articleMeta.author}`;
+    elements.articleDetail.content.innerHTML = '<p>Ładowanie treści...</p>';
+    
+    showView(elements.views.article);
+    elements.backButton.classList.remove('hidden');
+    elements.navTitle.style.marginLeft = '0px';
+    clearInterval(state.sliderInterval);
+
+    // Sprawdź pamięć podręczną (localStorage)
+    const cachedArticle = JSON.parse(localStorage.getItem(`article_${articleId}`));
+    if (cachedArticle && cachedArticle.lastUpdated >= articleMeta.lastUpdated) {
+        // Jeśli mamy świeżą wersję w cache, załaduj ją
+        elements.articleDetail.content.innerHTML = cachedArticle.content;
+    } else {
+        // W przeciwnym razie, pobierz z serwera i zapisz w cache
+        database.ref(`articles_content/${articleId}`).once('value', (snapshot) => {
+            const articleContent = snapshot.val();
+            if (articleContent) {
+                elements.articleDetail.content.innerHTML = articleContent.content;
+                localStorage.setItem(`article_${articleId}`, JSON.stringify({
+                    content: articleContent.content,
+                    lastUpdated: articleMeta.lastUpdated
+                }));
+            }
+        });
+    }
+    
+    // Zresetuj stan komentarzy i załaduj pierwszą stronę
+    state.displayedComments = [];
+    state.lastLoadedCommentKey = null;
+    state.areAllCommentsLoaded = false;
+    elements.commentSection.list.innerHTML = '';
+    loadMoreComments();
+
+    setupLikes(articleId);
+    setupShareButton(articleMeta);
+}
     
     // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
 // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
@@ -255,7 +298,16 @@ function renderComments(comments) {
     commentListContainer.eventListener = eventHandler;
 }
     // Pozostałe funkcje UI (setupFeaturedSlider, displayNewsList, etc.) bez zmian...
-    function displayNewsList(articles) { elements.newsList.innerHTML = ''; articles.forEach(article => { const card = document.createElement('div'); card.className = 'article-card'; card.dataset.id = article.id; card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`; elements.newsList.appendChild(card); }); }
+    function displayNewsList(articles) {
+    elements.newsList.innerHTML = ''; // Czyścimy listę przed każdym pełnym renderowaniem
+    articles.forEach(article => {
+        const card = document.createElement('div');
+        card.className = 'article-card';
+        card.dataset.id = article.id;
+        card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class.article-card-content"><h4>${article.title}</h4></div>`;
+        elements.newsList.appendChild(card);
+    });
+}
     function setupFeaturedSlider(articles) { if (articles.length === 0) { elements.slider.container.style.display = 'none'; return; } elements.slider.container.style.display = 'block'; elements.slider.container.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`; const content = elements.slider.container.querySelector('.slider-content'); const nav = elements.slider.container.querySelector('.slider-nav'); articles.forEach((article, index) => { const slide = document.createElement('div'); slide.className = 'slide'; slide.dataset.id = article.id; slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`; content.appendChild(slide); const navDot = document.createElement('span'); navDot.className = 'nav-dot'; navDot.dataset.index = index; nav.appendChild(navDot); }); showSlide(0); startSlideInterval(); }
     function showSlide(index) { const slides = elements.slider.container.querySelectorAll('.slide'); const dots = elements.slider.container.querySelectorAll('.nav-dot'); if (!slides.length) return; if (index >= slides.length) index = 0; if (index < 0) index = slides.length - 1; slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active')); if (slides[index]) slides[index].classList.add('active'); if (dots[index]) dots[index].classList.add('active'); state.currentSlideIndex = index; }
     function startSlideInterval() { clearInterval(state.sliderInterval); state.sliderInterval = setInterval(() => showSlide(state.currentSlideIndex + 1), 8000); }
@@ -268,9 +320,111 @@ function renderComments(comments) {
     // === 5. INTERAKCJE Z FIREBASE =====================================
     // =================================================================
     
-    function loadArticlesFromFirebase() { database.ref('content').on('value', (snapshot) => { const data = snapshot.val(); state.allArticles = data ? Object.values(data) : []; state.allArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); const featured = state.allArticles.filter(a => a.featured).slice(0, 5); displayNewsList(state.allArticles); setupFeaturedSlider(featured); handleDeepLink(); }); }
+    // ZASTĄP STARĄ loadArticlesFromFirebase TYMI DWOMA FUNKCJAMI
+
+function loadInitialArticles() {
+    let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE);
+
+    query.once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            loadMoreArticlesBtn.classList.add('hidden');
+            return;
+        }
+        
+        const newArticles = Object.values(data);
+        state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999));
+        state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order;
+
+        displayNewsList(state.allArticlesMeta);
+        const featured = state.allArticlesMeta.filter(a => a.featured);
+        setupFeaturedSlider(featured);
+
+        if (newArticles.length < ARTICLES_PER_PAGE) {
+            state.areAllArticlesLoaded = true;
+            loadMoreArticlesBtn.classList.add('hidden');
+        } else {
+            loadMoreArticlesBtn.classList.remove('hidden');
+        }
+    });
+}
+
+function loadMoreArticles() {
+    if (state.areAllArticlesLoaded) return;
+    loadMoreArticlesBtn.disabled = true;
+    loadMoreArticlesBtn.textContent = 'Ładowanie...';
+
+    // Zaczynamy od następnego elementu po ostatnim załadowanym
+    let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE);
+
+    query.once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data || Object.keys(data).length === 0) {
+            state.areAllArticlesLoaded = true;
+            loadMoreArticlesBtn.classList.add('hidden');
+            return;
+        }
+
+        const newArticles = Object.values(data);
+        newArticles.sort((a, b) => (a.order || 999) - (b.order || 999));
+        
+        state.allArticlesMeta.push(...newArticles);
+        state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order;
+        
+        displayNewsList(state.allArticlesMeta);
+        
+        loadMoreArticlesBtn.disabled = false;
+        loadMoreArticlesBtn.textContent = 'Wczytaj więcej';
+
+        if (newArticles.length < ARTICLES_PER_PAGE) {
+            state.areAllArticlesLoaded = true;
+            loadMoreArticlesBtn.classList.add('hidden');
+        }
+    });
+}
     function setupLikes(articleId) { const likesRef = database.ref(`articles/${articleId}/likes`); likesRef.on('value', (snapshot) => updateLikeButton(snapshot.val() || 0, articleId)); elements.articleDetail.likeButton.onclick = () => { const liked = localStorage.getItem(`liked_${articleId}`) === 'true'; if (liked) { localStorage.removeItem(`liked_${articleId}`); likesRef.set(firebase.database.ServerValue.increment(-1)); } else { localStorage.setItem(`liked_${articleId}`, 'true'); likesRef.set(firebase.database.ServerValue.increment(1)); } }; }
-    function listenForComments(articleId) { state.commentsListener = database.ref(`comments/${articleId}`).orderByChild('timestamp'); state.commentsListener.on('value', (snapshot) => { const data = snapshot.val(); const comments = data ? Object.entries(data).map(([key, val]) => ({ ...val, commentId: key })) : []; renderComments(comments.reverse()); }); }
+    // ZASTĄP STARĄ listenForComments TĄ JEDNĄ NOWĄ FUNKCJĄ
+
+function loadMoreComments() {
+    if (state.areAllCommentsLoaded || !state.currentArticle) return;
+    loadMoreCommentsBtn.disabled = true;
+    loadMoreCommentsBtn.textContent = 'Ładowanie...';
+
+    let query = database.ref(`comments/${state.currentArticle.id}`).orderByKey();
+
+    // Jeśli już coś załadowaliśmy, pobierz starsze komentarze
+    if (state.lastLoadedCommentKey) {
+        query = query.endBefore(state.lastLoadedCommentKey);
+    }
+    query = query.limitToLast(COMMENTS_PER_PAGE);
+
+    query.once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            state.areAllCommentsLoaded = true;
+            loadMoreCommentsBtn.classList.add('hidden');
+            if (state.displayedComments.length === 0) {
+                elements.commentSection.list.innerHTML = '<p>Brak komentarzy. Bądź pierwszy!</p>';
+            }
+            return;
+        }
+
+        const newComments = Object.entries(data).map(([key, val]) => ({ ...val, commentId: key })).reverse();
+        state.displayedComments.push(...newComments);
+        state.lastLoadedCommentKey = newComments[newComments.length - 1].commentId;
+
+        renderComments(state.displayedComments);
+
+        if (newComments.length < COMMENTS_PER_PAGE) {
+            state.areAllCommentsLoaded = true;
+            loadMoreCommentsBtn.classList.add('hidden');
+        } else {
+            loadMoreCommentsBtn.classList.remove('hidden');
+            loadMoreCommentsBtn.disabled = false;
+            loadMoreCommentsBtn.textContent = 'Wczytaj więcej komentarzy';
+        }
+    });
+}
 
     function addComment(author, message) {
         // DIAGNOSTYKA
@@ -440,6 +594,19 @@ function wrapTextInFormat(syntax) {
         
         window.addEventListener('hashchange', handleDeepLink);
         document.getElementById('format-italic-btn').addEventListener('click', () => wrapTextInFormat('*'));
+        loadMoreArticlesBtn.addEventListener('click', loadMoreArticles);
+    loadMoreCommentsBtn.addEventListener('click', loadMoreComments);
+    clearCacheBtn.addEventListener('click', () => {
+        let clearedCount = 0;
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('article_')) {
+                localStorage.removeItem(key);
+                clearedCount++;
+            }
+        }
+        alert(`Wyczyszczono ${clearedCount} zapisanych artykułów z pamięci podręcznej.`);
+    });
     }
 
     // =================================================================
@@ -453,11 +620,12 @@ function wrapTextInFormat(syntax) {
         
         bindEventListeners();
         initializeAuth();
-        loadArticlesFromFirebase();
+        loadInitialArticles();
     }
 
     init();
 });
+
 
 
 
