@@ -96,79 +96,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 8. GŁÓWNY MENEDŻER ZDARZEŃ (NAPRAWIONY) ======================
     // =================================================================
     
-    // ZNAJDŹ I ZASTĄP TĘ FUNKCJĘ
-function bindEventListeners() {
-    // --- GŁÓWNY, INTELIGENTNY NASŁUCHIWACZ KLIKNIĘĆ ---
-    document.body.addEventListener('click', (event) => {
-        const target = event.target;
-        
-        // --- Nawigacja i przyciski ogólne ---
-        if (target.id === 'back-button' || target.closest('#back-button')) {
-            // NAPRAWIONE: Teraz przycisk tylko i wyłącznie zmienia adres URL.
-            // Resztą zajmie się nasłuchiwacz 'hashchange'.
-            window.location.hash = '';
-            return;
-        }
-        if (target.id === 'load-more-articles-btn') { loadMoreArticles(); return; }
-        if (target.id === 'load-more-comments-btn') { loadMoreComments(); return; }
-        if (target.id === 'clear-cache-btn') { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
+    function bindEventListeners() {
+        document.body.addEventListener('click', (event) => {
+            const target = event.target;
+            
+            if (target === elements.backButton || target.closest('#back-button')) { showMainView(); return; }
+            if (target === elements.loadMoreArticlesBtn) { loadMoreArticles(); return; }
+            if (target === elements.loadMoreCommentsBtn) { loadMoreComments(); return; }
+            if (target === elements.clearCacheBtn) { let c=0; for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i); if(k&&k.startsWith('article_')){localStorage.removeItem(k);c++;}} alert(`Wyczyszczono ${c} artykułów.`); return; }
+            if (target === elements.adminButton || target.closest('#admin-button')) { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
+            if (target === elements.adminMenu.addButton) { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
+            if (target === elements.adminMenu.logoutButton) { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
+            if (target === elements.loginForm.submitButton) { handleAdminLogin(); return; }
+            if (target === elements.loginForm.cancelButton) { showMainView(); return; }
+            if (target === elements.editorForm.cancelButton) { showMainView(); return; }
+            if (target === elements.editorForm.deleteButton) { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showMainView(); }); } return; }
 
-        // --- Logowanie i panel admina ---
-        if (target.id === 'admin-button' || target.closest('#admin-button')) { if (state.isUserAdmin) elements.adminMenu.container.classList.toggle('hidden'); else showView(elements.views.login); return; }
-        if (target.id === 'admin-menu-add') { showEditor(null); elements.adminMenu.container.classList.add('hidden'); return; }
-        if (target.id === 'admin-menu-logout') { auth.signOut().then(() => { elements.adminMenu.container.classList.add('hidden'); alert("Wylogowano."); }); return; }
-        if (target.id === 'login-submit') { handleAdminLogin(); return; }
-        if (target.id === 'login-cancel') { showMainView(); return; }
-
-        // --- Edytor Artykułów ---
-        if (target.id === 'editor-cancel') { showMainView(); return; }
-        if (target.id === 'editor-delete') { const articleId = elements.editorForm.idInput.value; if (confirm(`Usunąć artykuł ID: ${articleId}?`)) { const updates = {}; updates[`/articles_meta/${articleId}`] = null; updates[`/articles_content/${articleId}`] = null; database.ref().update(updates).then(() => { alert("Artykuł usunięty."); showMainView(); }); } return; }
-
-        // --- Kliknięcie na artykuł ---
-        const articleCard = target.closest('[data-id]');
-        if (articleCard) {
-            // Kliknięcie na artykuł tylko zmienia adres URL.
-            window.location.hash = `article-${articleCard.dataset.id}`;
-            window.scrollTo(0, 0);
-            return;
-        }
-
-        // --- Interakcje w komentarzach (Edytuj/Usuń) ---
-        const commentEl = target.closest('.comment');
-        if (commentEl) {
-            const commentId = commentEl.dataset.commentId;
-            if (target.classList.contains('delete-comment-btn')) { if (confirm("Usunąć komentarz?")) { database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove(); } return; }
-            if (target.classList.contains('edit-comment-btn')) {
-                const commentData = state.allComments.find(c => c.commentId === commentId);
-                const messageP = commentEl.querySelector('.comment-message');
-                const controlsDiv = commentEl.querySelector('.comment-controls');
-                const editInput = document.createElement('textarea'); editInput.className = 'comment-edit-textarea'; editInput.value = commentData.message;
-                const saveBtn = document.createElement('button'); saveBtn.textContent = 'Zapisz';
-                const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Anuluj';
-                messageP.style.display = 'none'; controlsDiv.style.display = 'none';
-                commentEl.appendChild(editInput); commentEl.appendChild(saveBtn); commentEl.appendChild(cancelBtn);
-                editInput.focus();
-                saveBtn.onclick = () => { const newText = editInput.value.trim(); if (newText) { database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText); } };
-                cancelBtn.onclick = () => { messageP.style.display = ''; controlsDiv.style.display = ''; editInput.remove(); saveBtn.remove(); cancelBtn.remove(); };
+            const articleCard = target.closest('[data-id]');
+            if (articleCard && (target.closest('#news-list-view') || target.closest('#featured-slider-container'))) {
+                const articleId = articleCard.dataset.id;
+                if (state.isUserAdmin) {
+                    const articleToEdit = state.allArticlesMeta.find(a => a.id == articleId);
+                    showEditor(articleToEdit);
+                } else {
+                    displayArticle(articleId);
+                }
+                window.scrollTo(0, 0);
+                return;
             }
-        }
-        
-        // --- Kliknięcie na polubienie ---
-        if (target.id === 'like-button' || target.closest('#like-button')) {
-            const liked = localStorage.getItem(`liked_${state.currentArticle.id}`) === 'true';
-            const likesRef = database.ref(`articles/${state.currentArticle.id}/likes`);
-            if (liked) { localStorage.removeItem(`liked_${state.currentArticle.id}`); likesRef.set(firebase.database.ServerValue.increment(-1)); } 
-            else { localStorage.setItem(`liked_${state.currentArticle.id}`, 'true'); likesRef.set(firebase.database.ServerValue.increment(1)); }
-        }
-    });
 
-    // --- Zdarzenia formularzy i inne ---
-    elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
-    elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
-    
-    // NAPRAWIONY NASŁUCHIWACZ ZMIANY ADRESU URL
-    window.addEventListener('hashchange', handleDeepLink);
-}
+            const commentEl = target.closest('.comment');
+            if (commentEl) {
+                const commentId = commentEl.dataset.commentId;
+                if (target.classList.contains('delete-comment-btn')) { if (confirm("Usunąć komentarz?")) { database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove(); } return; }
+                if (target.classList.contains('edit-comment-btn')) {
+                    const commentData = state.allComments.find(c => c.commentId === commentId);
+                    const messageP = commentEl.querySelector('.comment-message');
+                    const controlsDiv = commentEl.querySelector('.comment-controls');
+                    const editInput = document.createElement('textarea'); editInput.className = 'comment-edit-textarea'; editInput.value = commentData.message;
+                    const saveBtn = document.createElement('button'); saveBtn.textContent = 'Zapisz';
+                    const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Anuluj';
+                    messageP.style.display = 'none'; controlsDiv.style.display = 'none';
+                    commentEl.appendChild(editInput); commentEl.appendChild(saveBtn); commentEl.appendChild(cancelBtn);
+                    editInput.focus();
+                    saveBtn.onclick = () => { const newText = editInput.value.trim(); if (newText) { database.ref(`comments/${state.currentArticle.id}/${commentId}/message`).set(newText); } };
+                    cancelBtn.onclick = () => { messageP.style.display = ''; controlsDiv.style.display = ''; editInput.remove(); saveBtn.remove(); cancelBtn.remove(); };
+                }
+            }
+            
+            if (target.id === 'like-button' || target.closest('#like-button')) {
+                const liked = localStorage.getItem(`liked_${state.currentArticle.id}`) === 'true';
+                const likesRef = database.ref(`articles/${state.currentArticle.id}/likes`);
+                if (liked) { localStorage.removeItem(`liked_${state.currentArticle.id}`); likesRef.set(firebase.database.ServerValue.increment(-1)); } 
+                else { localStorage.setItem(`liked_${state.currentArticle.id}`, 'true'); likesRef.set(firebase.database.ServerValue.increment(1)); }
+            }
+        });
+
+        elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
+        elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
+    }
 
     // =================================================================
     // === 9. INICJALIZACJA APLIKACJI (NAPRAWIONA) ======================
@@ -179,15 +165,15 @@ function bindEventListeners() {
         bindEventListeners();
         initializeAuth();
         
-        // Uruchom ładowanie i po zakończeniu sprawdź deep link
         loadInitialArticles(() => {
+            // Po załadowaniu artykułów, sprawdź URL
             const hash = window.location.hash;
             if (hash && hash.startsWith('#article-')) {
                 displayArticle(hash.substring(9));
             }
         });
 
-        // Nasłuchuj przyszłych zmian w URL za pomocą popstate
+        // Nasłuchuj przyszłych zmian w URL (np. przycisk wstecz/dalej w przeglądarce)
         window.addEventListener('popstate', () => {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#article-')) {
@@ -200,4 +186,3 @@ function bindEventListeners() {
     
     init();
 });
-
