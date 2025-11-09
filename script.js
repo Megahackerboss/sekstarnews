@@ -68,7 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
         profilePermsContent: document.getElementById('profile-perms-content'),
         profileInfoForm: document.getElementById('profile-info-form'),
         profileNickInput: document.getElementById('profile-nick-input'),
-        profileEmailInput: document.getElementById('profile-email-input')
+        profileEmailInput: document.getElementById('profile-email-input'),
+            // DODAJ TĘ LINIĘ
+        resetPasswordBtn: document.getElementById('profile-reset-password-button')
     }
 };
 
@@ -250,6 +252,22 @@ function handleLogout() {
             .catch(error => alert(`Błąd: ${error.message}`));
     }
 }
+    function handlePasswordReset() {
+    if (!state.currentUser || !state.currentUser.email) {
+        alert("Nie można zresetować hasła. Brak danych użytkownika.");
+        return;
+    }
+
+    const email = state.currentUser.email;
+    auth.sendPasswordResetEmail(email)
+        .then(() => {
+            alert(`Na Twój adres ${email} został wysłany email z instrukcją resetowania hasła.`);
+            elements.userPanel.view.classList.add('hidden'); // Zamknij panel po wysłaniu
+        })
+        .catch(error => {
+            alert(`Wystąpił błąd: ${error.message}`);
+        });
+}
 
 // Funkcja aktualizująca wygląd interfejsu w zależności od stanu logowania
 // Zastąp starą funkcję updateUserUI tą nową
@@ -329,6 +347,11 @@ function updateUserUI() {
             if (target.id === 'user-panel-logout') {
                 handleLogout();
                 return;
+            }
+            // DODAJ TEN FRAGMENT
+           if (target.id === 'profile-reset-password-button') {
+                handlePasswordReset();
+               return;
             }
             if (target.id === 'user-panel-cancel' || target.id === 'auth-cancel-button') {
                 elements.userPanel.view.classList.add('hidden');
@@ -432,6 +455,7 @@ function updateUserUI() {
     
     init();
 });
+
 
 
 
