@@ -70,7 +70,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 5. INTERAKCJE Z FIREBASE =====================================
     // =================================================================
     
-    function loadInitialArticles() { let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE); query.once('value', (snapshot) => { const data = snapshot.val(); if (!data) { elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order; displayNewsList(state.allArticlesMeta); const featured = state.allArticlesMeta.filter(a => a.featured); setupFeaturedSlider(featured); if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } else { elements.loadMoreArticlesBtn.classList.remove('hidden'); } handleDeepLink(); }); }
+    function loadInitialArticles() {
+    let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE);
+    query.once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            elements.loadMoreArticlesBtn.classList.add('hidden');
+            return;
+        }
+        const newArticles = Object.values(data);
+        state.allArticlesMeta = newArticles.sort((a, b) => (a.order || 999) - (b.order || 999));
+        
+        // Zapisujemy ostatnie "order", jeśli artykuły istnieją
+        if (state.allArticlesMeta.length > 0) {
+            state.lastLoadedArticleOrder = state.allArticlesMeta[state.allArticlesMeta.length - 1].order;
+        }
+
+        // KROK 1: Zawsze renderuj listę i slider w tle.
+        displayNewsList(state.allArticlesMeta);
+        const featured = state.allArticlesMeta.filter(a => a.featured);
+        setupFeaturedSlider(featured);
+
+        if (newArticles.length < ARTICLES_PER_PAGE) {
+            state.areAllArticlesLoaded = true;
+            elements.loadMoreArticlesBtn.classList.add('hidden');
+        } else {
+            elements.loadMoreArticlesBtn.classList.remove('hidden');
+        }
+
+        // KROK 2: Po wyrenderowaniu listy, sprawdź URL i pokaż właściwy widok.
+        handleDeepLink();
+    });
+}
     function loadMoreArticles() { if (state.areAllArticlesLoaded) return; elements.loadMoreArticlesBtn.disabled = true; elements.loadMoreArticlesBtn.textContent = 'Ładowanie...'; let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE); query.once('value', snapshot => { const data = snapshot.val(); if (!data || Object.keys(data).length === 0) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); return; } const newArticles = Object.values(data); newArticles.sort((a, b) => (a.order || 999) - (b.order || 999)); state.allArticlesMeta.push(...newArticles); state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order; displayNewsList(state.allArticlesMeta); elements.loadMoreArticlesBtn.disabled = false; elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej'; if (newArticles.length < ARTICLES_PER_PAGE) { state.areAllArticlesLoaded = true; elements.loadMoreArticlesBtn.classList.add('hidden'); } }); }
     function function listenForComments(articleId) {
     // Jeśli mamy aktywną referencję do komentarzy z POPRZEDNIEGO artykułu, wyłączamy nasłuchiwanie.
@@ -196,12 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Zdarzenia formularzy i inne ---
         elements.commentSection.form.addEventListener('submit', (e) => { e.preventDefault(); const name = elements.commentSection.nameInput.value.trim(); const message = elements.commentSection.messageInput.value.trim(); if (name && message) { addComment(name, message); elements.commentSection.form.reset(); } });
         elements.editorForm.form.addEventListener('submit', (e) => { e.preventDefault(); const articleId = elements.editorForm.idInput.value; const timestamp = Date.now(); const metaData = { id: parseInt(articleId), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: timestamp }; const contentData = { content: elements.editorForm.contentInput.value }; const updates = {}; updates[`/articles_meta/${articleId}`] = metaData; updates[`/articles_content/${articleId}`] = contentData; database.ref().update(updates).then(() => { alert("Artykuł zapisany!"); showMainView(); }); });
-        window.addEventListener('hashchange', () => {
-             // Czekaj aż Firebase załaduje dane, zanim obsłużysz link
-            if (state.allArticlesMeta.length > 0) {
-                handleDeepLink();
-            }
-        });
+        window.addEventListener('hashchange', handleDeepLink);
     }
 
     // =================================================================
@@ -217,5 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
 
 
