@@ -387,6 +387,39 @@
         setInterval(saveGame, 5000);
         setInterval(updateLeaderboard, 30000);
     });
+
+
+
+
+
+        
+
+            // Zmienne do przechowywania danych użytkownika w iframe
+    let currentUserInfo = {
+        uid: null,
+        nick: null
+    };
+
+    // Ta funkcja będzie wywoływana przez stronę nadrzędną
+    function setUserInfo(uid, nick) {
+        console.log(`Otrzymano dane od rodzica: UID=${uid}, Nick=${nick}`);
+        
+        // Zapisz dane
+        currentUserInfo.uid = uid;
+        currentUserInfo.nick = nick;
+
+        // Zaktualizuj interfejs użytkownika
+        document.getElementById('user-info').textContent = `Użytkownik: ${nick} (UID: ${uid})`;
+        document.getElementById('import-btn').disabled = false;
+        document.getElementById('export-btn').disabled = false;
+    }
+
+    // Przykład użycia zapisanych danych wewnątrz iframe
+    document.getElementById('import-btn').addEventListener('click', () => {
+        if (currentUserInfo.uid) {
+            alert(`Rozpoczynam import dla użytkownika ${currentUserInfo.nick}`);
+        }
+    });
     </script>
 </body>
 </html>
