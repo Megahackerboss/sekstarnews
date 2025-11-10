@@ -256,6 +256,7 @@
         // --- ZAKTUALIZOWANA, INTELIGENTNA FUNKCJA WCZYTYWANIA ---
         const loadGame = () => {
             let savedData; 
+            let daneZalogowanegoUzytkownika = null;
             try { 
                 savedData = JSON.parse(localStorage.getItem('clickerGameSave')); 
             } catch (e) { 
@@ -388,8 +389,7 @@
         setInterval(updateLeaderboard, 30000);
 
 
-        
-let daneZalogowanegoUzytkownika = null;
+
 
 /**
  * Ta funkcja jest publiczna (dostępna dla rodzica) i czeka na wywołanie.
