@@ -389,32 +389,25 @@
 
 
         
-                    // Zmienne do przechowywania danych użytkownika w iframe
-    let currentUserInfo = {
-        uid: null,
-        nick: null
+let daneZalogowanegoUzytkownika = null;
+
+/**
+ * Ta funkcja jest publiczna (dostępna dla rodzica) i czeka na wywołanie.
+ * Przyjmuje dwa argumenty i zapisuje je w lokalnej zmiennej.
+ */
+function odbierzDaneUzytkownika(otrzymanyUid, otrzymanyNick) {
+    console.log(`Iframe otrzymał dane: UID=${otrzymanyUid}, Nick=${otrzymanyNick}`);
+
+    // Zapisujemy otrzymane dane do lokalnego obiektu
+    daneZalogowanegoUzytkownika = {
+        uid: otrzymanyUid,
+        nick: otrzymanyNick
     };
 
-    // Ta funkcja będzie wywoływana przez stronę nadrzędną
-    function setUserInfo(uid, nick) {
-        console.log(`Otrzymano dane od rodzica: UID=${uid}, Nick=${nick}`);
-        
-        // Zapisz dane
-        currentUserInfo.uid = uid;
-        currentUserInfo.nick = nick;
-
-        // Zaktualizuj interfejs użytkownika
-        document.getElementById('user-info').textContent = `Użytkownik: ${nick} (UID: ${uid})`;
-        document.getElementById('import-btn').disabled = false;
-        document.getElementById('export-btn').disabled = false;
-    }
-
-    // Przykład użycia zapisanych danych wewnątrz iframe
-    document.getElementById('import-btn').addEventListener('click', () => {
-        if (currentUserInfo.uid) {
-            alert(`Rozpoczynam import dla użytkownika ${currentUserInfo.nick}`);
-        }
-    });
+    // Od tego momentu możesz używać obiektu 'daneZalogowanegoUzytkownika'
+    // w całej reszcie swojego kodu w iframe.
+}
+   
     });
 
 
