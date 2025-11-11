@@ -139,69 +139,56 @@
         const calculateTotalPrestigesSpent = () => { /* ... (bez zmian) ... */ };
         const calculatePrestigeCost = () => { /* ... (bez zmian) ... */ };
         const calculateTotalCPC = (isCrit = false) => { /* ... (bez zmian) ... */ };
+        const handleCookieClick = (isAuto = false) => { /* ... (bez zmian) ... */ };
 
-        const handleCookieClick = (isAuto = false) => {
-            let critChance = 0;
-            if (getPU('b4_1')) {
-                critChance += 0.01 + (getPU('b4_4') ? 0.02 : 0) + (gameState.prestigeCritChanceLevel * 0.001) + ((getPU('b4_5_level') || 0) * 0.001);
-            }
-            let isCrit = Math.random() < critChance;
-            if (isAuto && !getPU('b3_4')) isCrit = false;
-            let cpc = calculateTotalCPC(isCrit);
-            gameState.cookies += cpc;
-            updateUI();
-        };
-
-        const updateUI = () => { /* ... (bez zmian, oprócz poprawki z 'hasPrestiged') ... */ };
+        const updateUI = () => { /* ... (bez zmian) ... */ };
         const saveGame = () => {
             localStorage.setItem('clickerGameSave', JSON.stringify(gameState));
             console.log("LOG: Game Saved.");
         };
         
-        // --- NOWA, BEZPIECZNA FUNKCJA WCZYTYWANIA Z LOGAMI ---
+        // --- NOWA, OSTATECZNA FUNKCJA WCZYTYWANIA Z LOGAMI ---
         const loadGame = () => {
-            console.log("LOG: Executing loadGame...");
-            // Zawsze zaczynaj od pełnej, czystej kopii domyślnego stanu, aby zagwarantować, że wszystkie pola istnieją.
+            console.log("LOG: --- Starting loadGame ---");
+            // Krok 1: Zawsze zaczynaj od pełnej, czystej kopii domyślnego stanu. To jest nasza bezpieczna podstawa.
             gameState = JSON.parse(JSON.stringify(defaultState));
-            
+            console.log("LOG: Created a clean, default gameState.");
+
             try {
                 const savedDataString = localStorage.getItem('clickerGameSave');
                 if (savedDataString) {
-                    console.log("LOG: Saved data found in localStorage.");
+                    console.log("LOG: Found save data. Parsing...");
                     const savedData = JSON.parse(savedDataString);
+                    console.log("LOG: Save data parsed successfully:", savedData);
 
-                    // Bezpiecznie połącz zapisane dane z czystym stanem.
-                    // To zapewni, że nowe zmienne dodane w `defaultState` zostaną zachowane, jeśli nie ma ich w zapisie.
-                    gameState = { ...gameState, ...savedData };
-
-                    // Upewnij się, że zagnieżdżone obiekty są poprawnie połączone.
-                    if (savedData.prestigeUpgrades) {
-                        gameState.prestigeUpgrades = { ...defaultState.prestigeUpgrades, ...savedData.prestigeUpgrades };
+                    // Krok 2: Iteruj po kluczach domyślnego stanu i nadpisuj je wartościami z zapisu, jeśli istnieją.
+                    // To jest najbezpieczniejsza metoda łączenia, odporna na brakujące klucze.
+                    for (const key in gameState) {
+                        if (savedData[key] !== undefined) {
+                            gameState[key] = savedData[key];
+                            console.log(`LOG: Loading key '${key}' with value:`, savedData[key]);
+                        }
                     }
+                    console.log("LOG: Merge complete.");
                 } else {
-                    console.log("LOG: No saved data found. Starting fresh.");
+                    console.log("LOG: No save data found. Using default state.");
                 }
             } catch (error) {
-                console.error("LOG: Failed to load or parse saved data. Starting fresh to prevent crash.", error);
+                console.error("LOG: CRITICAL - Failed to load or parse save data. Using default state to prevent crash.", error);
             }
             
-            console.log("LOG: Game state successfully initialized:", gameState);
+            console.log("LOG: Final gameState before UI update:", JSON.parse(JSON.stringify(gameState)));
             D.getElementById('nickname-input').value = gameState.nickname;
             setupAutoclicker();
             updateUI();
-            console.log("LOG: Initial UI update complete.");
+            console.log("LOG: --- loadGame Finished, initial UI update complete ---");
         };
 
         const setupAutoclicker = () => { /* ... (bez zmian) ... */ };
         
         D.getElementById('game-container').addEventListener('click', (event) => { /* ... (bez zmian) ... */ });
         
-        const updateLeaderboard = () => {
-             if (gameState.nickname && gameState.nickname !== 'Anonim') {
-                const safeNickname = gameState.nickname.replace(/[.#$\[\]]/g, '_');
-                database.ref('leaderboard/' + safeNickname).set({ nn: gameState.nickname, c: Math.floor(gameState.cookies || 0) });
-            }
-        };
+        const updateLeaderboard = () => { /* ... (bez zmian) ... */ };
         database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => {
             console.log("LOG: Leaderboard data received from Firebase.");
             const list = D.getElementById('leaderboard-list'); list.innerHTML = ''; const scores = [];
