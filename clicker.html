@@ -93,6 +93,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     <script>
     window.addEventListener('DOMContentLoaded', () => {
+        console.log("LOG: DOM Loaded. Initializing script...");
 
         const firebaseConfig = {
         apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
@@ -103,6 +104,7 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        console.log("LOG: Firebase initialized.");
         
         const GAME_SETTINGS = {
             PRESTIGE_BASE_COST: 1000000,
@@ -151,48 +153,67 @@
         };
 
         const updateUI = () => { /* ... (bez zmian, oprócz poprawki z 'hasPrestiged') ... */ };
-        const saveGame = () => localStorage.setItem('clickerGameSave', JSON.stringify(gameState));
+        const saveGame = () => {
+            localStorage.setItem('clickerGameSave', JSON.stringify(gameState));
+            console.log("LOG: Game Saved.");
+        };
         
-        // --- NOWA, BEZPIECZNA FUNKCJA WCZYTYWANIA ---
+        // --- NOWA, BEZPIECZNA FUNKCJA WCZYTYWANIA Z LOGAMI ---
         const loadGame = () => {
-            // Zawsze zaczynaj od pełnej, czystej kopii domyślnego stanu
+            console.log("LOG: Executing loadGame...");
+            // Zawsze zaczynaj od pełnej, czystej kopii domyślnego stanu, aby zagwarantować, że wszystkie pola istnieją.
             gameState = JSON.parse(JSON.stringify(defaultState));
             
             try {
                 const savedDataString = localStorage.getItem('clickerGameSave');
                 if (savedDataString) {
+                    console.log("LOG: Saved data found in localStorage.");
                     const savedData = JSON.parse(savedDataString);
 
-                    // Połącz zapisane dane z czystym stanem. Nowe zmienne zostaną zachowane, stare zostaną nadpisane.
-                    // To jest bezpieczniejsze niż iterowanie po kluczach.
+                    // Bezpiecznie połącz zapisane dane z czystym stanem.
+                    // To zapewni, że nowe zmienne dodane w `defaultState` zostaną zachowane, jeśli nie ma ich w zapisie.
                     gameState = { ...gameState, ...savedData };
 
-                    // Upewnij się, że zagnieżdżone obiekty są poprawnie połączone, na przyszłość
+                    // Upewnij się, że zagnieżdżone obiekty są poprawnie połączone.
                     if (savedData.prestigeUpgrades) {
                         gameState.prestigeUpgrades = { ...defaultState.prestigeUpgrades, ...savedData.prestigeUpgrades };
                     }
+                } else {
+                    console.log("LOG: No saved data found. Starting fresh.");
                 }
             } catch (error) {
-                console.error("Nie udało się wczytać zapisu. Startuję nową grę.", error);
-                // W razie błędu, gameState już jest ustawiony na czysty stan, więc gra po prostu ruszy od nowa.
+                console.error("LOG: Failed to load or parse saved data. Starting fresh to prevent crash.", error);
             }
             
+            console.log("LOG: Game state successfully initialized:", gameState);
             D.getElementById('nickname-input').value = gameState.nickname;
             setupAutoclicker();
             updateUI();
+            console.log("LOG: Initial UI update complete.");
         };
-        // --- KONIEC POPRAWEK ---
 
         const setupAutoclicker = () => { /* ... (bez zmian) ... */ };
         
         D.getElementById('game-container').addEventListener('click', (event) => { /* ... (bez zmian) ... */ });
         
-        const updateLeaderboard = () => { /* ... (bez zmian) ... */ };
-        database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => { /* ... (bez zmian) ... */ });
+        const updateLeaderboard = () => {
+             if (gameState.nickname && gameState.nickname !== 'Anonim') {
+                const safeNickname = gameState.nickname.replace(/[.#$\[\]]/g, '_');
+                database.ref('leaderboard/' + safeNickname).set({ nn: gameState.nickname, c: Math.floor(gameState.cookies || 0) });
+            }
+        };
+        database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => {
+            console.log("LOG: Leaderboard data received from Firebase.");
+            const list = D.getElementById('leaderboard-list'); list.innerHTML = ''; const scores = [];
+            snapshot.forEach(child => { scores.push(child.val()) });
+            scores.reverse().forEach(player => { const li = D.createElement('li'); li.textContent = `${player.nn}: ${formatNumber(player.c)}`; list.appendChild(li); });
+        });
 
+        // --- INICJALIZACJA GRY ---
         loadGame();
         setInterval(saveGame, 5000);
         setInterval(updateLeaderboard, 30000);
+        console.log("LOG: Script initialization complete. Game is running.");
     });
     </script>
 </body>
