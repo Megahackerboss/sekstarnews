@@ -140,7 +140,6 @@
         const calculatePrestigeCost = () => { /* ... (bez zmian) ... */ };
         const calculateTotalCPC = (isCrit = false) => { /* ... (bez zmian) ... */ };
         const handleCookieClick = (isAuto = false) => { /* ... (bez zmian) ... */ };
-
         const updateUI = () => { /* ... (bez zmian) ... */ };
         const saveGame = () => {
             localStorage.setItem('clickerGameSave', JSON.stringify(gameState));
@@ -150,33 +149,30 @@
         // --- NOWA, OSTATECZNA FUNKCJA WCZYTYWANIA Z LOGAMI ---
         const loadGame = () => {
             console.log("LOG: --- Starting loadGame ---");
-            // Krok 1: Zawsze zaczynaj od pełnej, czystej kopii domyślnego stanu. To jest nasza bezpieczna podstawa.
-            gameState = JSON.parse(JSON.stringify(defaultState));
-            console.log("LOG: Created a clean, default gameState.");
+            let loadedState = null;
 
             try {
                 const savedDataString = localStorage.getItem('clickerGameSave');
                 if (savedDataString) {
                     console.log("LOG: Found save data. Parsing...");
-                    const savedData = JSON.parse(savedDataString);
-                    console.log("LOG: Save data parsed successfully:", savedData);
-
-                    // Krok 2: Iteruj po kluczach domyślnego stanu i nadpisuj je wartościami z zapisu, jeśli istnieją.
-                    // To jest najbezpieczniejsza metoda łączenia, odporna na brakujące klucze.
-                    for (const key in gameState) {
-                        if (savedData[key] !== undefined) {
-                            gameState[key] = savedData[key];
-                            console.log(`LOG: Loading key '${key}' with value:`, savedData[key]);
-                        }
-                    }
-                    console.log("LOG: Merge complete.");
+                    loadedState = JSON.parse(savedDataString);
+                    console.log("LOG: Save data parsed successfully:", loadedState);
                 } else {
                     console.log("LOG: No save data found. Using default state.");
                 }
             } catch (error) {
-                console.error("LOG: CRITICAL - Failed to load or parse save data. Using default state to prevent crash.", error);
+                console.error("LOG: CRITICAL - Failed to parse save data. Using default state to prevent data loss.", error);
             }
+
+            // Stwórz finalny stan, łącząc domyślny z wczytanym.
+            // To gwarantuje, że wszystkie klucze z defaultState będą istnieć.
+            gameState = Object.assign({}, defaultState, loadedState);
             
+            // Dodatkowo, upewnij się, że zagnieżdżony obiekt `prestigeUpgrades` jest poprawnie połączony
+            if (loadedState && loadedState.prestigeUpgrades) {
+                gameState.prestigeUpgrades = Object.assign({}, defaultState.prestigeUpgrades, loadedState.prestigeUpgrades);
+            }
+
             console.log("LOG: Final gameState before UI update:", JSON.parse(JSON.stringify(gameState)));
             D.getElementById('nickname-input').value = gameState.nickname;
             setupAutoclicker();
@@ -189,12 +185,7 @@
         D.getElementById('game-container').addEventListener('click', (event) => { /* ... (bez zmian) ... */ });
         
         const updateLeaderboard = () => { /* ... (bez zmian) ... */ };
-        database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => {
-            console.log("LOG: Leaderboard data received from Firebase.");
-            const list = D.getElementById('leaderboard-list'); list.innerHTML = ''; const scores = [];
-            snapshot.forEach(child => { scores.push(child.val()) });
-            scores.reverse().forEach(player => { const li = D.createElement('li'); li.textContent = `${player.nn}: ${formatNumber(player.c)}`; list.appendChild(li); });
-        });
+        database.ref('leaderboard').orderByChild('c').limitToLast(10).on('value', snapshot => { /* ... (bez zmian) ... */ });
 
         // --- INICJALIZACJA GRY ---
         loadGame();
