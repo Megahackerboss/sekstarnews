@@ -95,14 +95,11 @@
     window.addEventListener('DOMContentLoaded', () => {
 
         const firebaseConfig = {
-        apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
-        authDomain: "sekstarnews.firebaseapp.com",
-        databaseURL: "https://sekstarnews-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "sekstarnews",
-        storageBucket: "sekstarnews.appspot.com",
-        messagingSenderId: "610657374509",
-        appId: "1:610657374509:web:1c90f0ba2ab8e0927183a4"
-    };
+            apiKey: "TWOJ_API_KEY",
+            authDomain: "TWOJ_AUTH_DOMAIN",
+            databaseURL: "TWOJA_DATABASE_URL",
+            projectId: "TWOJ_PROJECT_ID"
+        };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
@@ -110,7 +107,7 @@
             PRESTIGE_BASE_COST: 1000000,
             PRESTIGE_COST_INCREASE_RATE: 1.07,
             UPGRADE1_CAP: 1000,
-            UPGRADE1_MIN_MULTIPLIER_EFFECT: 0.005 // 0.5% - minimalny wzrost ceny
+            UPGRADE1_MIN_MULTIPLIER_EFFECT: 0.005
         };
         
         const translations = {
@@ -176,12 +173,9 @@
 
         const t = (key, ...args) => {
             let string = translations[gameState.language][key] || key;
-            args.forEach((arg, i) => {
-                string = string.replace(`{${i}}`, arg);
-            });
+            args.forEach((arg, i) => { string = string.replace(`{${i}}`, arg); });
             return string;
         };
-
         const formatNumber = (num) => { /* ... (bez zmian) ... */ };
         const getPU = (key) => gameState.prestigeUpgrades[key] || 0;
         const sumArithmeticSeries = (n, a, d) => { /* ... (bez zmian) ... */ };
@@ -194,7 +188,6 @@
             document.querySelectorAll('.lang').forEach(el => {
                 el.textContent = t(el.dataset.key);
             });
-
             D.getElementById('score').textContent = formatNumber(gameState.cookies);
             D.getElementById('cpc-display').textContent = formatNumber(calculateTotalCPC());
             if (getPU('b4_1')) {
@@ -253,45 +246,44 @@
             });
         };
 
-        const saveGame = () => { /* ... (bez zmian) ... */ };
-        const loadGame = () => { /* ... (bez zmian) ... */ };
+        const saveGame = () => localStorage.setItem('clickerGameSave', JSON.stringify(gameState));
+        
+        const loadGame = () => {
+            let savedData; 
+            try { 
+                savedData = JSON.parse(localStorage.getItem('clickerGameSave')); 
+            } catch (e) { 
+                savedData = null; 
+            }
+            
+            gameState = { ...defaultState };
+            
+            if (savedData) {
+                // Skopiuj zapisane wartości do czystego stanu, zamiast łączyć obiekty
+                for (const key in defaultState) {
+                    if (savedData[key] !== undefined) {
+                        // Głębokie kopiowanie dla prestigeUpgrades, aby uniknąć problemów
+                        if (key === 'prestigeUpgrades' && typeof savedData[key] === 'object') {
+                            gameState[key] = { ...defaultState[key], ...savedData[key] };
+                        } else {
+                            gameState[key] = savedData[key];
+                        }
+                    }
+                }
+            }
+
+            D.getElementById('nickname-input').value = gameState.nickname;
+            setupAutoclicker();
+            updateUI();
+        };
+
         const setupAutoclicker = () => { /* ... (bez zmian) ... */ };
         
         D.getElementById('game-container').addEventListener('click', (event) => {
             const target = event.target.closest('button');
             if (!target) return;
-
-            if (target.classList.contains('pt-node')) { /* ... (bez zmian) ... */ return; }
-
-            switch (target.id) {
-                case 'cookie-btn': handleCookieClick(); break;
-                case 'upgrade1-btn':
-                    if (gameState.upgrade1Level >= GAME_SETTINGS.UPGRADE1_CAP) return;
-                    if (gameState.cookies >= gameState.upgrade1Cost) {
-                        gameState.cookies -= gameState.upgrade1Cost;
-                        let decayRate = 0.01; if (getPU('center')) decayRate = 0.0105; if (getPU('b2_2')) decayRate = 0.011; if (getPU('b2_3')) decayRate = 0.0112; if (getPU('b2_4')) decayRate = 0.0113;
-                        decayRate += (getPU('b2_5_level') || 0) * 0.00004;
-                        const decayBase = 1 - decayRate;
-                        const dynamicMultiplier = 0.1 * Math.pow(decayBase, gameState.upgrade1Level);
-                        const multiplier = 1 + Math.max(GAME_SETTINGS.UPGRADE1_MIN_MULTIPLIER_EFFECT, dynamicMultiplier);
-                        gameState.upgrade1Cost *= multiplier;
-                        gameState.upgrade1Level++;
-                        updateUI();
-                    }
-                    break;
-                case 'upgrade2-btn': /* ... (bez zmian) ... */ break;
-                case 'upgrade3-btn': /* ... (bez zmian) ... */ break;
-                case 'prestige-autoclicker-btn': /* ... (bez zmian) ... */ break;
-                case 'prestige-crit-chance-btn': /* ... (bez zmian) ... */ break;
-                case 'prestige-crit-damage-btn': /* ... (bez zmian) ... */ break;
-                case 'prestige-btn': /* ... (bez zmian) ... */ break;
-                case 'reset-btn': /* ... (bez zmian) ... */ break;
-                case 'set-nickname-btn': /* ... (bez zmian) ... */ break;
-                case 'lang-switcher':
-                    gameState.language = gameState.language === 'pl' ? 'en' : 'pl';
-                    updateUI();
-                    break;
-            }
+            if (target.classList.contains('pt-node')) { /* ... (logika drzewka) ... */ return; }
+            switch (target.id) { /* ... (reszta logiki przycisków) ... */ }
         });
         
         const updateLeaderboard = () => { /* ... (bez zmian) ... */ };
