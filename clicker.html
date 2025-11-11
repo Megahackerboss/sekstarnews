@@ -229,7 +229,7 @@
             let pcdCost = 1 + (gameState.prestigeCritDamageLevel * 2);
             pcdBtn.textContent = `+2% bonusu krytyka (Poziom: ${gameState.prestigeCritDamageLevel}) Koszt: ${formatNumber(pcdCost)} PP`;
             
-            const hasPrestiged = Object.keys(gameState.prestigeUpgrades).length > 0;
+            const hasPrestiged = Object.keys(gameState.prestigeUpgrades).length > 0 || gameState.prestigePoints > 0;
             const currentPrestigeCost = calculatePrestigeCost();
             D.getElementById('prestige-section').style.display = gameState.cookies >= currentPrestigeCost || hasPrestiged ? 'block' : 'none';
             D.getElementById('prestige-points').textContent = formatNumber(gameState.prestigePoints);
