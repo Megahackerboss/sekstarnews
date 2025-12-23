@@ -42,7 +42,6 @@
         </div>
 
         <button id="cookie-btn" oncontextmenu="return false;"></button>
-        <!-- Używamy data-i18n dla statycznych tekstów, dynamiczne (liczby) są wstawiane przez JS -->
         <h3><span data-i18n="cookies">Ciasteczka</span>: <span id="score">0</span></h3>
         <p style="margin: 5px 0 0;"><span data-i18n="click">Klik</span>: <span id="cpc-display">1</span> <small id="crit-info"></small></p>
 
@@ -64,7 +63,6 @@
             <button id="prestige-btn"></button>
 
             <div id="prestige-tree" style="display: none; margin-top: 15px;">
-                <!-- Usunąłem statyczne tytuły, będą generowane dynamicznie przez i18next -->
                 <button id="pt-center" class="pt-node" data-id="center">Start</button>
                 <button id="pt-b1-1" class="pt-node" data-id="b1_1">B1.1</button>
                 <button id="pt-b1-2" class="pt-node" data-id="b1_2">B1.2</button>
@@ -207,25 +205,8 @@
             }
         };
 
-        // Inicjalizacja i18next
-        i18next.init({
-            lng: 'pl', // Domyślny język
-            debug: false,
-            resources: resources
-        }, function(err, t) {
-            updateStaticTexts();
-            // loadGame() zostanie wywołane na końcu skryptu
-        });
-
-        window.changeLanguage = (lang) => {
-            i18next.changeLanguage(lang, () => {
-                document.getElementById('btn-pl').classList.toggle('active', lang === 'pl');
-                document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-                updateStaticTexts();
-                updateUI(); // Odśwież dynamiczne teksty
-            });
-        };
-
+        // --- DEFINIUJEMY FUNKCJE POMOCNICZE *PRZED* INICJALIZACJĄ I18NEXT ---
+        
         const updateStaticTexts = () => {
             // Aktualizuj elementy z atrybutem data-i18n
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -233,6 +214,27 @@
             });
             document.getElementById('nickname-input').placeholder = i18next.t('placeholder_nick');
         };
+
+        window.changeLanguage = (lang) => {
+            i18next.changeLanguage(lang, () => {
+                document.getElementById('btn-pl').classList.toggle('active', lang === 'pl');
+                document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+                updateStaticTexts();
+                if (typeof updateUI === 'function') {
+                    updateUI(); // Odśwież dynamiczne teksty (tylko jeśli gra już wystartowała)
+                }
+            });
+        };
+
+        // --- TERAZ INICJALIZUJEMY I18NEXT ---
+        i18next.init({
+            lng: 'pl', // Domyślny język
+            debug: false,
+            resources: resources
+        }, function(err, t) {
+            // Teraz updateStaticTexts jest już zdefiniowane, więc błąd zniknie
+            updateStaticTexts();
+        });
 
         // --- KONIEC KONFIGURACJI TŁUMACZEŃ ---
 
@@ -539,15 +541,8 @@
         setInterval(saveGame, 5000);
         setInterval(updateLeaderboard, 30000);
 
-        // Funkcja do odbierania danych (poprawiona widoczność scope)
         window.odbierzDaneUzytkownika = function(otrzymanyUid, otrzymanyNick) {
             console.log(`Iframe otrzymał dane: UID=${otrzymanyUid}, Nick=${otrzymanyNick}`);
-            // Można tu dodać logikę aktualizacji nicku w grze, np:
-            // if(otrzymanyNick) { 
-            //    gameState.nickname = otrzymanyNick; 
-            //    D.getElementById('nickname-input').value = otrzymanyNick;
-            //    saveGame();
-            // }
         };
     });
     </script>
