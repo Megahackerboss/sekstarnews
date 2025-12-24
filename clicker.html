@@ -27,7 +27,6 @@
         #pt-b4-1 { grid-column: 3; grid-row: 4; } #pt-b4-2 { grid-column: 3; grid-row: 5; } #pt-b4-3 { grid-column: 2; grid-row: 5; } #pt-b4-4 { grid-column: 1; grid-row: 5; } #pt-b4-5 { grid-column: 1; grid-row: 4; }
         input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* Language Switcher */
         #lang-switcher { position: absolute; top: 0; right: 0; }
         #lang-switcher button { padding: 5px 10px; font-size: 0.8em; margin: 0; }
         #lang-switcher button.active { background-color: #007bff; color: white; border-color: #0056b3; }
@@ -35,7 +34,6 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Przełącznik Języka -->
         <div id="lang-switcher">
             <button onclick="window.changeLanguage('pl')" id="btn-pl" class="active">PL</button>
             <button onclick="window.changeLanguage('en')" id="btn-en">EN</button>
@@ -91,20 +89,16 @@
         <input id="nickname-input" placeholder="Wpisz swój nick">
         <button id="set-nickname-btn" data-i18n="set_btn">Ustaw</button>
         
-        
         <h4 data-i18n="leaderboard_title">Ranking Top 10</h4>
         <div id="leaderboard"> <ol id="leaderboard-list"></ol> </div>
     </div>
     
-    <!-- Biblioteka i18next -->
     <script src="https://unpkg.com/i18next/i18next.min.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     <script>
     window.addEventListener('DOMContentLoaded', () => {
 
-        // --- KONFIGURACJA TŁUMACZEŃ ---
         const resources = {
             pl: {
                 translation: {
@@ -117,19 +111,13 @@
                     leaderboard_title: "Ranking Top 10",
                     crit_info: "({{chance}}% szans na krytyk)",
                     placeholder_nick: "Wpisz swój nick",
-                    
-                    // Przyciski ulepszeń
                     upgrade1: "Ulepszenie 1 (Poziom: {{level}}) Koszt: {{cost}}",
                     upgrade2: "Ulepszenie 2 (Poziom: {{level}}) Koszt: {{cost}}",
                     upgrade3: "Ulepszenie 3 (Poziom: {{level}}) Koszt: {{cost}}",
-                    
-                    // Przyciski prestiżu (sklep)
                     p_autoclicker: "Trwały Auto-Clicker ({{level}} klik/s) Koszt: {{cost}} PP",
                     p_crit_chance: "+0.1% szansy na krytyk (Poziom: {{level}}) Koszt: {{cost}} PP",
                     p_crit_damage: "+2% bonusu krytyka (Poziom: {{level}}) Koszt: {{cost}} PP",
                     prestige_action: "Prestiż (Koszt: {{cost}})",
-
-                    // Drzewko prestiżu (opisy węzłów)
                     pt_desc_center: "Lepsze skalowanie U1",
                     pt_desc_b1_1: "Odblokuj U2",
                     pt_desc_b1_2: "Ulepszenie 2 daje 1.5% bonusu",
@@ -151,7 +139,6 @@
                     pt_desc_b4_3: "Odblokuj trwałe ulepszenie bonusu krytyka",
                     pt_desc_b4_4: "Bonus do szansy i obrażeń krytycznych",
                     pt_desc_b4_5: "Nieskończone ulepszenie krytyków",
-                    
                     pt_cost_format: " (Koszt: {{cost}} PP)",
                     pt_level_format: " | Poziom: {{level}}"
                 }
@@ -167,16 +154,13 @@
                     leaderboard_title: "Top 10 Leaderboard",
                     crit_info: "({{chance}}% crit chance)",
                     placeholder_nick: "Enter your nickname",
-
                     upgrade1: "Upgrade 1 (Level: {{level}}) Cost: {{cost}}",
                     upgrade2: "Upgrade 2 (Level: {{level}}) Cost: {{cost}}",
                     upgrade3: "Upgrade 3 (Level: {{level}}) Cost: {{cost}}",
-                    
                     p_autoclicker: "Perm. Auto-Clicker ({{level}} click/s) Cost: {{cost}} PP",
                     p_crit_chance: "+0.1% crit chance (Level: {{level}}) Cost: {{cost}} PP",
                     p_crit_damage: "+2% crit damage (Level: {{level}}) Cost: {{cost}} PP",
                     prestige_action: "Prestige (Cost: {{cost}})",
-
                     pt_desc_center: "Better U1 scaling",
                     pt_desc_b1_1: "Unlock U2",
                     pt_desc_b1_2: "Upgrade 2 gives 1.5% bonus",
@@ -198,17 +182,13 @@
                     pt_desc_b4_3: "Unlock Perm. Crit Damage upgrade",
                     pt_desc_b4_4: "Bonus to crit chance & dmg",
                     pt_desc_b4_5: "Infinite Crit upgrade",
-                    
                     pt_cost_format: " (Cost: {{cost}} PP)",
                     pt_level_format: " | Level: {{level}}"
                 }
             }
         };
 
-        // --- DEFINIUJEMY FUNKCJE POMOCNICZE *PRZED* INICJALIZACJĄ I18NEXT ---
-        
         const updateStaticTexts = () => {
-            // Aktualizuj elementy z atrybutem data-i18n
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 el.textContent = i18next.t(el.getAttribute('data-i18n'));
             });
@@ -221,28 +201,24 @@
                 document.getElementById('btn-en').classList.toggle('active', lang === 'en');
                 updateStaticTexts();
                 if (typeof updateUI === 'function') {
-                    updateUI(); // Odśwież dynamiczne teksty (tylko jeśli gra już wystartowała)
+                    updateUI(); 
                 }
             });
         };
 
-        // --- TERAZ INICJALIZUJEMY I18NEXT ---
         i18next.init({
-            lng: 'pl', // Domyślny język
+            lng: 'pl',
             debug: false,
             resources: resources
         }, function(err, t) {
-            // Teraz updateStaticTexts jest już zdefiniowane, więc błąd zniknie
             updateStaticTexts();
         });
 
-        // --- KONIEC KONFIGURACJI TŁUMACZEŃ ---
-
         const firebaseConfig = {
-        apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
-        authDomain: "sekstarnews.firebaseapp.com",
-        databaseURL: "https://sekstarnews-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "sekstarnews"
+            apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
+            authDomain: "sekstarnews.firebaseapp.com",
+            databaseURL: "https://sekstarnews-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "sekstarnews"
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -280,7 +256,7 @@
         const formatNumber = (num) => {
             num = num || 0;
             if (num < 1000) return Math.floor(num).toLocaleString(i18next.language === 'pl' ? 'pl-PL' : 'en-US');
-            const suffixes = ["", "K", "M", "B", "T"];
+            const suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No"];
             const i = Math.floor(Math.log10(num) / 3);
             if (i >= suffixes.length) return parseFloat(num.toExponential(2)).toLocaleString(i18next.language === 'pl' ? 'pl-PL' : 'en-US');
             const shortNum = (num / Math.pow(1000, i)).toFixed(2);
@@ -351,7 +327,6 @@
         };
 
         const updateUI = () => {
-            // Zmieniono na i18next.t z parametrami
             D.getElementById('score').textContent = formatNumber(gameState.cookies);
             D.getElementById('cpc-display').textContent = formatNumber(calculateTotalCPC());
             
@@ -360,7 +335,6 @@
                 D.getElementById('crit-info').textContent = i18next.t('crit_info', { chance: (critChance * 100).toFixed(1) });
             } else { D.getElementById('crit-info').textContent = ''; }
             
-            // Tłumaczenie przycisków ulepszeń
             D.getElementById('upgrade1-btn').textContent = i18next.t('upgrade1', { level: formatNumber(gameState.upgrade1Level), cost: formatNumber(gameState.upgrade1Cost) });
             
             const upg2Btn = D.getElementById('upgrade2-btn'); upg2Btn.classList.toggle('visible', getPU('b1_1'));
@@ -389,7 +363,6 @@
             D.getElementById('prestige-btn').textContent = i18next.t('prestige_action', { cost: formatNumber(currentPrestigeCost) });
             D.getElementById('prestige-tree').style.display = hasPrestiged ? 'grid' : 'none';
             
-            // Dynamiczne generowanie tytułów drzewka prestiżu
             document.querySelectorAll('.pt-node').forEach(btn => {
                 const id = btn.dataset.id; const node = prestigeTree[id]; if (!node) return;
                 let cost = node.cost; if (node.infinite) { cost += (getPU(id + '_level') || 0) * node.costIncrease; }
@@ -401,8 +374,7 @@
                     if (gameState.prestigePoints >= cost) { btn.disabled = false; }
                 }
                 
-                // Budowanie przetłumaczonego tytułu
-                let title = i18next.t('pt_desc_' + id.replace('.', '_')); // zamienia np. b1.1 na b1_1 dla klucza
+                let title = i18next.t('pt_desc_' + id.replace('.', '_'));
                 title += i18next.t('pt_cost_format', { cost: cost });
                 if (node.infinite) {
                     title += i18next.t('pt_level_format', { level: getPU(id + '_level') || 0 });
@@ -415,12 +387,7 @@
         
         const loadGame = () => {
             let savedData; 
-            let daneZalogowanegoUzytkownika = null;
-            try { 
-                savedData = JSON.parse(localStorage.getItem('clickerGameSave')); 
-            } catch (e) { 
-                savedData = null; 
-            }
+            try { savedData = JSON.parse(localStorage.getItem('clickerGameSave')); } catch (e) { savedData = null; }
             if (savedData && savedData.prestigeCost !== undefined) { delete savedData.prestigeCost; }
             gameState = { ...defaultState, ...savedData };
             if (savedData && savedData.prestigeUpgrades) {
@@ -444,9 +411,7 @@
         D.getElementById('game-container').addEventListener('click', (event) => {
             const target = event.target.closest('button');
             if (!target) return;
-
-            // Logika przycisków
-            if (target.id === 'btn-pl' || target.id === 'btn-en') return; // Ignoruj przyciski języka tutaj
+            if (target.id === 'btn-pl' || target.id === 'btn-en') return;
 
             if (target.classList.contains('pt-node')) {
                 const prestigeId = target.dataset.id;
@@ -466,18 +431,49 @@
 
             switch (target.id) {
                 case 'cookie-btn': handleCookieClick(); break;
+                
+                // --- TUTAJ JEST TWOJA ZMIANA (x, y, z, y2) ---
                 case 'upgrade1-btn':
                     if (gameState.cookies >= gameState.upgrade1Cost) {
                         gameState.cookies -= gameState.upgrade1Cost;
-                        let decayRate = 0.01; if (getPU('center')) decayRate = 0.0105; if (getPU('b2_2')) decayRate = 0.011; if (getPU('b2_3')) decayRate = 0.0112; if (getPU('b2_4')) decayRate = 0.0113;
-                        decayRate += (getPU('b2_5_level') || 0) * 0.00004;
-                        const decayBase = 1 - decayRate;
-                        const multiplier = 1 + (0.1 * Math.pow(decayBase, gameState.upgrade1Level));
+                        
+                        // Zmienna x: Bazowy wzrost ceny (10%)
+                        const x = 0.10;
+
+                        // Zmienna y: Bazowe zmniejszenie wzrostu (1% + ewentualne bonusy z drzewka)
+                        // To jest "podstawowa liczba", o którą pytałeś - jest stała dla danej rozgrywki
+                        let y = 0.01; 
+                        if (getPU('center')) y = 0.0105; 
+                        if (getPU('b2_2')) y = 0.011; 
+                        if (getPU('b2_3')) y = 0.0112; 
+                        if (getPU('b2_4')) y = 0.0113;
+                        y += (getPU('b2_5_level') || 0) * 0.00004;
+
+                        // Zmienna z: "Zmniejszacz zmniejszacza" (1%)
+                        const z = 0.01;
+
+                        // Zmienna y2: Aktualne zmniejszenie wzrostu (y pomniejszone o z wielokrotnie)
+                        // Obliczamy to dynamicznie, dzięki czemu po restarcie (gdy level=0) y2 automatycznie wraca do wartości y
+                        // y2 = y * (1 - z)^poziom
+                        let y2 = y * Math.pow(1 - z, gameState.upgrade1Level);
+                        
+                        // Obliczamy mnożnik ceny
+                        // Wzrost ceny jest redukowany o y2
+                        // Mnożnik = 1 + (x * (1 - y2)^poziom)
+                        // Czyli: 1 + (10% * (czynnik redukcji oparty na y2))
+                        // Skoro y2 to wartość "ulgi", to czynnik redukcji = 1 - y2
+                        const decayFactor = 1 - y2;
+                        
+                        // Finalny mnożnik:
+                        const multiplier = 1 + (x * Math.pow(decayFactor, gameState.upgrade1Level));
+                        
                         gameState.upgrade1Cost *= multiplier;
                         gameState.upgrade1Level++;
                         updateUI();
                     }
                     break;
+                // --------------------------------
+
                 case 'upgrade2-btn':
                     if (gameState.cookies >= gameState.upgrade2Cost) {
                         gameState.cookies -= gameState.upgrade2Cost;
@@ -517,7 +513,6 @@
                         setupAutoclicker(); updateUI();
                     }
                     break;
-                
                 case 'set-nickname-btn':
                     const nick = D.getElementById('nickname-input').value.trim();
                     if (nick) gameState.nickname = nick; saveGame();
