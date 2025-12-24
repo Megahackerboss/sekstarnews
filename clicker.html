@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Cookie Clicker i18n</title>
+    <title>Cookie Clicker Logic Fix</title>
     <style>
         :root { --line-color: #ddd; --purchased-color: #28a745; --unlocked-color: #007bff; --disabled-color: #6c757d; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; margin: 0; padding: 15px; background-color: #f0f2f5; color: #333; user-select: none; }
@@ -291,16 +291,50 @@
             return GAME_SETTINGS.PRESTIGE_BASE_COST * Math.pow(GAME_SETTINGS.PRESTIGE_COST_INCREASE_RATE, totalPrestiges);
         };
         
+        // --- POPRAWIONA FUNKCJA OBLICZAJĄCA PRODUKCJĘ ---
         const calculateTotalCPC = (isCrit = false) => {
-            let base = 1; let bonusFromUpg1 = 0; let bonusMultiplier = 1;
-            let bonusPer100 = getPU('b2_1') ? Math.floor(gameState.upgrade1Level / 100) : 0;
-            for (let i = 0; i < gameState.upgrade1Level; i++) { bonusFromUpg1 += 1 + Math.floor(i / 10) + bonusPer100; }
+            let base = 1; 
+            let bonusFromUpg1 = 0; 
+            let bonusMultiplier = 1;
+
+            // Zmienne do symulacji przyrostu
+            let currentDecadeBonus = 0; // Ile dodaje nam "bycie w danej dziesiątce"
+            let currentGrowth = 1;      // O ile rośnie bonus co 10 poziomów (startowo o 1)
+
+            // Pętla symulująca "historię" każdego kupionego ulepszenia
+            for (let i = 1; i <= gameState.upgrade1Level; i++) {
+                
+                // Sprawdzamy, czy weszliśmy w nową dziesiątkę (np. poziom 10, 20, 100...)
+                if (i % 10 === 0) {
+                    // Sprawdzamy, czy weszliśmy w nową setkę (np. 100, 200...)
+                    // Wtedy "przyrost przyrostu" się zwiększa
+                    if (i % 100 === 0) {
+                        currentGrowth++; // Poziom 100 -> wzrost skacze z +1 na +2
+                    }
+                    currentDecadeBonus += currentGrowth;
+                }
+
+                // Wartość tego konkretnego ulepszenia 'i'
+                // Baza (1) + Bonus za setki (Math.floor(i/100)) + Bonus dekadowy
+                let hundredsBonus = Math.floor(i / 100);
+                let valueOfThisUpgrade = 1 + hundredsBonus + currentDecadeBonus;
+
+                // Dodajemy bonus z drzewka prestiżu (opcjonalny, addytywny)
+                let bonusPer100Prestige = getPU('b2_1') ? Math.floor(i / 100) : 0;
+                valueOfThisUpgrade += bonusPer100Prestige;
+
+                bonusFromUpg1 += valueOfThisUpgrade;
+            }
+
+            // Aplikowanie mnożników globalnych
             if (getPU('b1_1')) {
                 let upg2BonusPerLevel = getPU('b1_2') ? 0.015 : 0.01;
                 upg2BonusPerLevel += (getPU('b1_5_level') || 0) * 0.0001;
                 bonusMultiplier *= Math.pow(1 + upg2BonusPerLevel, gameState.upgrade2Level);
             }
+            
             let cpc = (base + bonusFromUpg1) * bonusMultiplier;
+            
             if (getPU('b1_3')) {
                 let upg3Multiplier = 1; let upg3Bonus = getPU('b1_4') ? 0.11 : 0.1;
                 upg3Bonus += (getPU('b1_5_level') || 0) * 0.02;
@@ -432,39 +466,28 @@
             switch (target.id) {
                 case 'cookie-btn': handleCookieClick(); break;
                 
-                // --- TUTAJ JEST TWOJA ZMIANA (x, y, z, y2) ---
+                // --- KOD CENY ULEPSZENIA 1 (x, y, z, y2) ---
                 case 'upgrade1-btn':
                     if (gameState.cookies >= gameState.upgrade1Cost) {
                         gameState.cookies -= gameState.upgrade1Cost;
                         
-                        // Zmienna x: Bazowy wzrost ceny (10%)
-                        const x = 0.10;
-
-                        // Zmienna y: Bazowe zmniejszenie wzrostu (1% + ewentualne bonusy z drzewka)
-                        // To jest "podstawowa liczba", o którą pytałeś - jest stała dla danej rozgrywki
-                        let y = 0.01; 
+                        const x = 0.10; // Baza wzrostu ceny
+                        let y = 0.01;   // Baza ulgi
                         if (getPU('center')) y = 0.0105; 
                         if (getPU('b2_2')) y = 0.011; 
                         if (getPU('b2_3')) y = 0.0112; 
                         if (getPU('b2_4')) y = 0.0113;
                         y += (getPU('b2_5_level') || 0) * 0.00004;
 
-                        // Zmienna z: "Zmniejszacz zmniejszacza" (1%)
-                        const z = 0.01;
+                        const z = 0.01; // Zmniejszacz ulgi
 
-                        // Zmienna y2: Aktualne zmniejszenie wzrostu (y pomniejszone o z wielokrotnie)
-                        // Obliczamy to dynamicznie, dzięki czemu po restarcie (gdy level=0) y2 automatycznie wraca do wartości y
-                        // y2 = y * (1 - z)^poziom
+                        // y2: dynamiczna ulga (zmniejsza się wraz z poziomem)
                         let y2 = y * Math.pow(1 - z, gameState.upgrade1Level);
                         
-                        // Obliczamy mnożnik ceny
-                        // Wzrost ceny jest redukowany o y2
-                        // Mnożnik = 1 + (x * (1 - y2)^poziom)
-                        // Czyli: 1 + (10% * (czynnik redukcji oparty na y2))
-                        // Skoro y2 to wartość "ulgi", to czynnik redukcji = 1 - y2
+                        // Obliczamy czynnik ulgi
                         const decayFactor = 1 - y2;
                         
-                        // Finalny mnożnik:
+                        // Mnożnik ceny
                         const multiplier = 1 + (x * Math.pow(decayFactor, gameState.upgrade1Level));
                         
                         gameState.upgrade1Cost *= multiplier;
