@@ -328,8 +328,8 @@ body {
 /* Zastąp stary styl lub dodaj ten */
 #user-panel-button {
     position: fixed;
-    top: 15px; /* Zamiast bottom */
-    right: 20px; /* Dopasowane do paddingu nawigacji */
+    top: 15px;
+    right: 20px;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -339,9 +339,12 @@ body {
     font-size: 20px;
     font-weight: bold;
     cursor: pointer;
-    z-index: 101; /* Wyżej niż nawigacja */
-    text-align: center;
-    line-height: 36px;
+    z-index: 101;
+    /* ZMIANA: Używamy Flexbox zamiast line-height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0; /* Ważne dla Chromium */
 }
 
 /* Style dla nowego widoku profilu w panelu użytkownika */
@@ -404,6 +407,30 @@ body {
     color: white;
 }
 
+/* Przycisk edycji artykułu (pływający ołówek) */
+#article-edit-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: #ffc107; /* Żółty ostrzegawczy */
+    color: #142a4a;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    font-size: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    cursor: pointer;
+    z-index: 999;
+    transition: transform 0.2s;
+}
+
+#article-edit-fab:hover {
+    transform: scale(1.1) rotate(15deg);
+}
 
 
 
