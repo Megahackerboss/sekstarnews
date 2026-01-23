@@ -156,22 +156,54 @@
     </div>
 
     <!-- 2. Panel Edytora -->
-    <div id="editor-view" class="hidden">
-        <h2>Edytor Artykułów</h2>
+<div id="editor-view" class="hidden">
         <form id="editor-form">
-            <input type="hidden" id="editor-article-id"> 
-            <label>ID:</label> <input type="number" id="editor-id" required>
-            <label>Order:</label> <input type="number" id="editor-order" required>
-            <label>Data:</label> <input type="text" id="editor-date" required>
-            <label>Tytuł:</label> <input type="text" id="editor-title" required>
-            <label>Autor:</label> <input type="text" id="editor-author" required>
-            <label>URL Miniaturki:</label> <input type="text" id="editor-thumbnail" required>
-            <label><input type="checkbox" id="editor-featured"> Wyróżniony?</label>
-            <label>Treść (HTML):</label> <textarea id="editor-content" rows="15" required></textarea>
-            <div class="editor-actions">
-                <button type="submit">Zapisz</button>
+            <h2>Edytor Artykułów</h2>
+            <div class="editor-grid">
+                <input type="hidden" id="editor-article-id"> 
+                
+                <div>
+                    <label>ID:</label>
+                    <input type="number" id="editor-id" required style="width: 100%;">
+                </div>
+                <div>
+                    <label>Order:</label>
+                    <input type="number" id="editor-order" required style="width: 100%;">
+                </div>
+                
+                <div class="editor-full-width">
+                    <label>Tytuł:</label>
+                    <input type="text" id="editor-title" required style="width: 100%;">
+                </div>
+
+                <div>
+                    <label>Autor:</label>
+                    <input type="text" id="editor-author" required style="width: 100%;">
+                </div>
+                <div>
+                    <label>Data:</label>
+                    <input type="text" id="editor-date" required style="width: 100%;">
+                </div>
+
+                <div class="editor-full-width">
+                    <label>URL Miniaturki:</label>
+                    <input type="text" id="editor-thumbnail" required style="width: 100%;">
+                </div>
+
+                <div class="editor-full-width">
+                     <label><input type="checkbox" id="editor-featured"> Wyróżniony na sliderze?</label>
+                </div>
+
+                <div class="editor-full-width">
+                    <label>Treść (HTML):</label>
+                    <textarea id="editor-content" rows="15" required style="width: 100%;"></textarea>
+                </div>
+            </div>
+
+            <div class="editor-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" id="editor-delete" class="delete-button" style="background-color: #d9534f; margin-right: auto;">USUŃ</button>
                 <button type="button" id="editor-cancel">Anuluj</button>
-                <button type="button" id="editor-delete" class="delete-button">USUŃ</button>
+                <button type="submit" style="background-color: #28a745;">Zapisz</button>
             </div>
         </form>
     </div>
