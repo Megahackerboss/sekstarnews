@@ -431,6 +431,71 @@ body {
 #article-edit-fab:hover {
     transform: scale(1.1) rotate(15deg);
 }
+.fab-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: #ffdd4b; /* Złoty kolor brawl stars */
+    color: #142a4a;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 2000; /* Powyżej treści, ale poniżej modalów */
+    transition: transform 0.2s, background-color 0.2s;
+    border: 3px solid white;
+}
+
+.fab-button:hover {
+    transform: scale(1.1) rotate(10deg);
+    background-color: #ffea8a;
+}
+
+.fab-button.hidden {
+    display: none !important;
+}
+
+/* --- Kolor Nicku w input --- */
+input[type="color"] {
+    border: none;
+    width: 50px;
+    height: 40px;
+    cursor: pointer;
+    background: none;
+}
+
+/* --- Panel Admina w profilu --- */
+.admin-panel-section {
+    background-color: #142a4a;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #4a68a5;
+    text-align: left;
+}
+
+.checkbox-group label {
+    display: block;
+    margin: 8px 0;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-group input {
+    width: auto !important;
+    margin-right: 10px;
+}
+
+/* --- Kolorowy Nick w Komentarzach --- */
+.comment-author {
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5); 
+    /* Domyślny kolor jest nadpisywany przez inline-style z JS */
+}
 
 
 
