@@ -1,8 +1,17 @@
-document.addEventListener('DOMContentLoaded', () => {
+// Używamy 'load' zamiast 'DOMContentLoaded', aby upewnić się, że Firebase CDN się załadował
+window.addEventListener('load', () => {
 
     // =================================================================
     // === 1. KONFIGURACJA =============================================
     // =================================================================
+    
+    // Zabezpieczenie: Sprawdzamy czy Firebase się załadował
+    if (typeof firebase === 'undefined') {
+        console.error("Firebase nie został załadowany! Sprawdź połączenie z internetem lub blokery reklam.");
+        alert("Błąd ładowania systemu. Odśwież stronę.");
+        return;
+    }
+
     const firebaseConfig = {
         apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
         authDomain: "sekstarnews.firebaseapp.com",
@@ -123,11 +132,29 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.userPanel.addNewArticleBtn.style.backgroundColor = "#28a745";
     elements.userPanel.addNewArticleBtn.style.marginTop = "10px";
     elements.userPanel.addNewArticleBtn.className = "hidden";
-    document.querySelector('#profile-perms-content').prepend(elements.userPanel.addNewArticleBtn);
+    
+    // Zabezpieczenie przed brakiem elementu w HTML
+    if(document.querySelector('#profile-perms-content')) {
+        document.querySelector('#profile-perms-content').prepend(elements.userPanel.addNewArticleBtn);
+    }
 
     // =================================================================
     // === 3. STAN APLIKACJI ===========================================
     // =================================================================
+    
+    // Bezpieczne pobieranie localStorage (fix dla trybu incognito/restrykcyjnych przeglądarek)
+    let localUserId;
+    try {
+        localUserId = localStorage.getItem('localUserId');
+        if (!localUserId) {
+            localUserId = `guest_${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('localUserId', localUserId);
+        }
+    } catch (e) {
+        console.warn("Brak dostępu do localStorage, używam tymczasowego ID sesji.");
+        localUserId = `guest_temp_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
     let state = {
         allArticlesMeta: [],
         lastLoadedArticleOrder: null,
@@ -136,13 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
         activeCommentsRef: null,
         currentArticle: null,
         currentUser: null,
-        localUserId: localStorage.getItem('localUserId') || `guest_${Math.random().toString(36).substr(2, 9)}`,
+        localUserId: localUserId,
         rolesConfig: {},
         permissions: { can_write_articles: false, can_delete_comments: false, can_manage_roles: false },
         sliderInterval: null,
         currentSlideIndex: 0
     };
-    if(!localStorage.getItem('localUserId')) localStorage.setItem('localUserId', state.localUserId);
 
     // =================================================================
     // === 4. LOGIKA UPRAWNIEŃ I DANYCH ================================
@@ -200,10 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const navDot = document.createElement('span');
             navDot.className = 'nav-dot';
             navDot.dataset.index = index;
-            // NAPRAWA: KROPKI SĄ TERAZ KLIKALNE
             navDot.onclick = () => {
                 showSlide(index);
-                startSlideInterval(); // Resetujemy timer po kliknięciu
+                startSlideInterval();
             };
             nav.appendChild(navDot);
         });
@@ -384,7 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateUserInfoFields() {
         if (state.currentUser) {
-            // NAPRAWA: GŁÓWNY PRZYCISK POKAZUJE INICJAŁ I KOLOR
             elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
             elements.userPanel.button.style.backgroundColor = state.currentUser.color || '#4a68a5';
 
@@ -394,14 +418,12 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.userPanel.profileEmailInput.value = state.currentUser.email;
             elements.userPanel.profileColorInput.value = state.currentUser.color || '#ffffff';
             
-            // NAPRAWA: NICK W KOMENTARZACH SIĘ WYPEŁNIA ALE JEST EDYTOWALNY
             elements.commentSection.nameInput.value = state.currentUser.nick;
             elements.commentSection.nameInput.disabled = false;
 
             elements.userPanel.infoView.classList.remove('hidden');
             elements.userPanel.authView.classList.add('hidden');
         } else {
-            // GOŚĆ
             elements.userPanel.button.textContent = '?';
             elements.userPanel.button.style.backgroundColor = '#4a68a5';
             
@@ -414,17 +436,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // === 8. INICJALIZACJA I EVENTY ===================================
+    // === 8. EVENTY I ŁADOWANIE =======================================
     // =================================================================
     function bindEvents() {
-        // TABS
+        // --- UDOSTĘPNIANIE (NAPRAWIONE) ---
+        elements.articleDetail.shareButton.onclick = async () => {
+            if (!state.currentArticle) return;
+            const url = `${window.location.origin}${window.location.pathname}#article-${state.currentArticle.id}`;
+            const shareData = {
+                title: state.currentArticle.title,
+                text: "Sprawdź ten artykuł na Sekstar News!",
+                url: url
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    throw new Error("API not supported");
+                }
+            } catch (err) {
+                try {
+                    await navigator.clipboard.writeText(url);
+                    alert("Link skopiowany do schowka!");
+                } catch (e) {
+                    prompt("Skopiuj link:", url);
+                }
+            }
+        };
+
+        // --- ZAKŁADKI ---
         function switchTab(clickedBtn, contentToShow, groupBtns, groupContents) {
             Object.values(groupBtns).forEach(b => b.classList.remove('active'));
             Object.values(groupContents).forEach(c => c.classList.add('hidden'));
             clickedBtn.classList.add('active');
             contentToShow.classList.remove('hidden');
         }
-
         const profileBtns = { info: elements.userPanel.tabs.infoBtn, perms: elements.userPanel.tabs.permsBtn };
         const profileCont = { info: elements.userPanel.contents.info, perms: elements.userPanel.contents.perms };
         elements.userPanel.tabs.infoBtn.onclick = () => switchTab(elements.userPanel.tabs.infoBtn, elements.userPanel.contents.info, profileBtns, profileCont);
@@ -435,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.userPanel.tabs.loginBtn.onclick = () => switchTab(elements.userPanel.tabs.loginBtn, elements.userPanel.contents.login, authBtns, authCont);
         elements.userPanel.tabs.registerBtn.onclick = () => switchTab(elements.userPanel.tabs.registerBtn, elements.userPanel.contents.register, authBtns, authCont);
 
-        // Panel
+        // --- PANEL ---
         elements.userPanel.button.onclick = () => {
             updateUserInfoFields(); 
             elements.userPanel.view.classList.remove('hidden');
@@ -444,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.userPanel.authCancelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
         elements.userPanel.logoutBtn.onclick = () => { auth.signOut(); elements.userPanel.view.classList.add('hidden'); };
 
-        // Zapis profilu
+        // --- ZAPIS PROFILU ---
         elements.userPanel.profileInfoForm.onsubmit = (e) => {
             e.preventDefault();
             const newNick = elements.userPanel.profileNickInput.value.trim();
@@ -468,17 +514,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }).catch(e => alert(e.message));
         };
 
-        // Artykuły
+        // --- NAWIGACJA ARTYKUŁÓW ---
         elements.loadMoreArticlesBtn.onclick = loadMoreArticles;
         elements.backButton.onclick = showMainView;
         document.body.addEventListener('click', e => {
             const card = e.target.closest('.article-card, .slide');
-            if(card && !e.target.classList.contains('nav-dot')) { // Ignoruj kropki slidera
+            // Ignorujemy kliknięcie, jeśli trafiono w kropkę nawigacji
+            if(card && !e.target.classList.contains('nav-dot')) { 
                 displayArticle(card.dataset.id);
             }
         });
 
-        // Auth
+        // --- AUTH ---
         elements.userPanel.loginEmail.closest('form').onsubmit = e => {
             e.preventDefault();
             auth.signInWithEmailAndPassword(elements.userPanel.loginEmail.value, elements.userPanel.loginPassword.value)
@@ -502,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
-        // Admin
+        // --- ADMIN ---
         elements.userPanel.adminAssignBtn.onclick = assignRole;
         elements.userPanel.roleSaveBtn.onclick = () => {
             const name = elements.userPanel.roleEditorName.value.trim().toLowerCase();
@@ -523,11 +570,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         elements.editorForm.form.onsubmit = saveArticle;
         
-        // Komentarze
+        // --- KOMENTARZE ---
         elements.commentSection.form.onsubmit = (e) => {
             e.preventDefault();
             const msg = elements.commentSection.messageInput.value.trim();
-            const author = state.currentUser ? state.currentUser.nick : elements.commentSection.nameInput.value; // Preferuj nick z konta, ale bierz input
+            const author = state.currentUser ? state.currentUser.nick : elements.commentSection.nameInput.value;
             if(!msg || !author) return;
             
             const userId = state.currentUser ? state.currentUser.uid : state.localUserId;
@@ -550,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Obsługa usuwania komentarzy (delegacja zdarzeń)
+        // Usuwanie komentarzy
         elements.commentSection.list.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-comment-btn')) {
                 const commentEl = e.target.closest('.comment');
@@ -560,9 +607,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+        
+        // Polubienia
+        if (elements.articleDetail.likeButton) {
+            elements.articleDetail.likeButton.onclick = () => {
+                if(!state.currentArticle) return;
+                try {
+                    const liked = localStorage.getItem(`liked_${state.currentArticle.id}`) === 'true';
+                    const ref = database.ref(`articles/${state.currentArticle.id}/likes`);
+                    if(liked) { localStorage.removeItem(`liked_${state.currentArticle.id}`); ref.set(firebase.database.ServerValue.increment(-1)); }
+                    else { localStorage.setItem(`liked_${state.currentArticle.id}`, 'true'); ref.set(firebase.database.ServerValue.increment(1)); }
+                } catch(e) {}
+            };
+        }
     }
 
-    // === WIDOK ARTYKUŁU I KOMENTARZY ===
+    // === WIDOKI I RENDEROWANIE ===
     function showMainView() {
         Object.values(elements.views).forEach(v => v.classList.add('hidden'));
         elements.views.main.classList.remove('hidden');
@@ -588,6 +648,16 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.articleDetail.author.textContent = meta.author;
         elements.articleDetail.content.innerHTML = "Ładowanie...";
         
+        // Likes listener
+        database.ref(`articles/${id}/likes`).on('value', s => {
+            elements.articleDetail.likeCount.textContent = s.val() || 0;
+            try {
+                const liked = localStorage.getItem(`liked_${id}`) === 'true';
+                if(liked) elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♥️';
+                else elements.articleDetail.likeButton.querySelector('.heart-icon').textContent = '♡';
+            } catch(e){}
+        });
+
         database.ref(`articles_content/${id}`).once('value', s => {
             const c = s.val() ? s.val().content : '';
             elements.articleDetail.content.innerHTML = c;
@@ -605,7 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.commentSection.list.innerHTML = '';
         if(!data) return;
 
-        // Sortowanie po dacie (najnowsze na górze)
         const comments = Object.entries(data).map(([k,v]) => ({...v, id: k}))
                                .sort((a,b) => b.timestamp - a.timestamp);
 
@@ -615,12 +684,8 @@ document.addEventListener('DOMContentLoaded', () => {
             el.dataset.commentId = comment.id;
             el.style.borderLeft = `3px solid ${comment.userColor || '#fff'}`;
             
-            // NAPRAWA: LOGIKA USUWANIA KOMENTARZY
-            // 1. Czy to mój komentarz? (Sprawdzamy UID dla zalogowanych LUB localUserId dla gości)
             const myId = state.currentUser ? state.currentUser.uid : state.localUserId;
             const isMyComment = comment.userId === myId;
-            
-            // 2. Czy mam uprawnienia moda/admina?
             const canModerate = hasPermission('can_delete_comments');
             
             let deleteBtn = '';
@@ -651,14 +716,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const s = await database.ref(`users/${u.uid}`).once('value');
                 state.currentUser = { uid: u.uid, ...s.val() };
             }
-            updateUserInfoFields(); // Odśwież ikonę profilu
+            updateUserInfoFields();
             calculatePermissions();
-            // Jeśli jesteśmy w artykule, odśwież komentarze, żeby pojawiły się przyciski usuwania
-            if(state.currentArticle) {
-                 // Trigger re-render by reading once (or waiting for .on listener)
-                 // Listener .on zajmie się tym automatycznie, ale przyciski 'delete' pojawią się przy następnym renderze
-                 // Wymuśmy to manualnie jeśli trzeba, ale .on powinien wystarczyć.
-            }
         });
     }
 
