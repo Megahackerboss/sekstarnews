@@ -1,234 +1,185 @@
-<!DOCTYPE html><html lang="pl"><head>
+<!DOCTYPE html>
+<html lang="pl">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sekstar news</title>
+    <title>Sekstar News</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 <body>
 
+    <!-- === HEADER === -->
     <header class="navbar">
-        <button id="back-button" class="nav-button hidden">
-             <!-- Użyj rozwiązania A lub B z poprzedniej odpowiedzi -->
-        </button>
-        <div class="nav-title"><img src="images/04a2de9d503f501aca1e.svg" style="height:lem; vertical-align: -8px;">SEKSTAR NEWS</div>
+        <button id="back-button" class="nav-button hidden"></button>
+        <div class="nav-title">
+            <img src="images/04a2de9d503f501aca1e.svg" style="height:1em; vertical-align: -8px;">
+            SEKSTAR NEWS
+        </div>
     </header>
 
+    <!-- === MAIN APP CONTAINER === -->
     <main id="app-container">
-        <!-- Główny widok z listą newsów -->
+        <!-- Widok Główny -->
         <div id="main-view">
-    <div id="featured-slider-container"></div>
-    <!-- Nowy kontener na kolumnę z artykułami -->
-    <div id="articles-column">
-        <div id="news-list-view"></div>
-        <button id="load-more-articles-btn" class="load-more-btn hidden">Wczytaj więcej artykułów</button>
-    </div>
-</div>
+            <div id="featured-slider-container"></div>
+            <div id="articles-column">
+                <div id="news-list-view"></div>
+                <button id="load-more-articles-btn" class="load-more-btn hidden">Wczytaj więcej artykułów</button>
+            </div>
+        </div>
 
-        <!-- Widok pojedynczego artykułu -->
+        <!-- Widok Artykułu -->
         <div id="article-view" class="hidden">
-            <!-- Kontener na dynamiczną treść artykułu -->
             <div id="article-content-wrapper">
-                 <!-- Metadane (data, autor) będą wstawiane tutaj przez JS -->
                 <div class="article-meta">
                     <span id="article-date"></span> | <span id="article-author"></span>
                 </div>
-                <!-- Właściwa treść artykułu -->
                 <div id="article-content"></div>
             </div>
 
-            <!-- Przyciski akcji (Polub, Udostępnij) -->
             <div class="article-actions">
                 <button id="like-button" class="action-button">
                     <span class="heart-icon">♡</span> Polub (<span id="like-count">0</span>)
                 </button>
-                <button id="share-button" class="action-button"><img src="images/288ad794778de2e73599.svg" style="height: 1em; vertical-align: -3px;">Udostępnij</button>
+                <button id="share-button" class="action-button">
+                    <img src="images/288ad794778de2e73599.svg" style="height: 1em; vertical-align: -3px;">Udostępnij
+                </button>
             </div>
 
-            <!-- Sekcja Komentarzy -->
             <div class="comments-section">
                 <h3>Komentarze</h3>
                 <form id="comment-form">
                     <input type="text" id="comment-name" placeholder="Twój nick" required="">
-                    <!-- Wklej to wewnątrz <form id="comment-form">, przed <textarea> -->
                     <div class="format-buttons">
                         <button type="button" id="format-italic-btn"><i>I</i></button>
                     </div>
                     <textarea id="comment-message" placeholder="Twoja wiadomość..." required=""></textarea>
                     <button type="submit">Dodaj komentarz</button>
                 </form>
-                <div id="comments-list">
-                    <!-- Komentarze będą dodawane tutaj przez JS -->
-                </div>
+                <div id="comments-list"></div>
                 <button id="load-more-comments-btn" class="load-more-btn hidden">Wczytaj więcej komentarzy</button>
             </div>
         </div>
     </main>
-<!-- Panel Edytora (WERSJA POPRAWIONA I KOMPLETNA) -->
+
+    <!-- === MODALE I PANELE (POZA MAIN!) === -->
+
+    <!-- 1. Panel Użytkownika -->
+    <button id="user-panel-button">?</button>
+
+    <div id="user-panel-view" class="hidden">
+        <div id="user-panel-box">
+            
+            <!-- Zalogowany -->
+            <div id="user-info-view" class="hidden">
+                <h3>Witaj, <span id="user-info-nick"></span>!</h3>
+                
+                <div class="profile-tabs">
+                    <button id="show-info-tab" class="active">Informacje ogólne</button>
+                    <button id="show-perms-tab">Uprawnienia</button>
+                </div>
+
+                <div class="profile-content">
+                    <!-- Zakładka Info -->
+                    <div id="profile-info-content">
+                        <form id="profile-info-form">
+                            <label for="profile-nick-input">Twój Nick:</label>
+                            <input type="text" id="profile-nick-input" required>
+
+                            <label for="profile-color-input">Twój Kolor Nicku:</label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="color" id="profile-color-input" value="#ffffff">
+                                <span style="font-size: 12px; color: #aaa;">(Widoczny w komentarzach)</span>
+                            </div>
+
+                            <label for="profile-email-input">Twój Email:</label>
+                            <input type="email" id="profile-email-input" disabled>
+                            
+                            <label>Twoja Ranga:</label>
+                            <div id="user-current-role-badge" style="color: #ffdd4b; font-weight: bold; margin-bottom: 15px;">Wczytywanie...</div>
+
+                            <button type="button" id="profile-reset-password-button">Zresetuj hasło (otrzymasz email)</button>
+                            <button type="submit" id="profile-save-button">Zapisz zmiany</button>
+                        </form>
+                    </div>
+
+                    <!-- Zakładka Uprawnienia (Admin) -->
+                    <div id="profile-perms-content" class="hidden">
+                        <h4>Zarządzanie Użytkownikami</h4>
+                        <div class="admin-panel-section">
+                            <label>Zmień rangę użytkownika (wpisz email):</label>
+                            <input type="email" id="admin-user-email" placeholder="Email użytkownika">
+                            <select id="admin-role-select"></select>
+                            <button id="admin-assign-role-btn">Nadaj Rangę</button>
+                        </div>
+                        <hr style="border-color: #4a68a5; margin: 20px 0;">
+                        <h4>Edytor Rang</h4>
+                        <div class="admin-panel-section">
+                            <label>Nazwa Rangi (ID):</label>
+                            <input type="text" id="role-editor-name" placeholder="np. moderator">
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" id="perm-write-articles"> Pisanie/Edycja Artykułów</label>
+                                <label><input type="checkbox" id="perm-delete-comments"> Usuwanie Komentarzy</label>
+                                <label><input type="checkbox" id="perm-manage-roles"> Zarządzanie Rolami</label>
+                            </div>
+                            <button id="admin-save-role-btn">Zapisz/Aktualizuj Rangę</button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border-color: #4a68a5; margin: 20px 0;">
+                <button id="user-panel-logout">Wyloguj</button>
+                <button id="user-panel-cancel">Zamknij</button>
+            </div>
+
+            <!-- Niezalogowany -->
+            <div id="auth-view">
+                <div class="auth-tabs">
+                    <button id="show-login-tab" class="active">Logowanie</button>
+                    <button id="show-register-tab">Rejestracja</button>
+                </div>
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Hasło" required>
+                    <button type="submit">Zaloguj</button>
+                </form>
+                <form id="register-form" class="hidden">
+                    <input type="text" id="register-nick" placeholder="Nick" required>
+                    <input type="email" id="register-email" placeholder="Email" required>
+                    <input type="password" id="register-password" placeholder="Hasło" required>
+                    <button type="submit">Zarejestruj</button>
+                </form>
+                <button id="auth-cancel-button">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Panel Edytora -->
     <div id="editor-view" class="hidden">
         <h2>Edytor Artykułów</h2>
         <form id="editor-form">
-            <!-- Ukryte pole, które przechowuje ID do edycji -->
             <input type="hidden" id="editor-article-id"> 
-
-            <!-- Pola formularza -->
-            <label>ID (unikalny numer, nie zmieniaj przy edycji):</label>
-            <input type="number" id="editor-id" required>
-
-            <label>Order (kolejność, mniejsza liczba = wyżej):</label>
-            <input type="number" id="editor-order" required>
-            
-            <label>Data:</label>
-            <input type="text" id="editor-date" required>
-            
-            <label>Tytuł:</label>
-            <input type="text" id="editor-title" required>
-            
-            <label>Autor:</label>
-            <input type="text" id="editor-author" required>
-            
-            <label>URL Miniaturki:</label>
-            <input type="text" id="editor-thumbnail" required>
-            
-            <label>
-              <input type="checkbox" id="editor-featured"> Czy wyróżniony w sliderze?
-            </label>
-            
-            <label>Treść (HTML):</label>
-            <textarea id="editor-content" rows="15" required></textarea>
-            
+            <label>ID:</label> <input type="number" id="editor-id" required>
+            <label>Order:</label> <input type="number" id="editor-order" required>
+            <label>Data:</label> <input type="text" id="editor-date" required>
+            <label>Tytuł:</label> <input type="text" id="editor-title" required>
+            <label>Autor:</label> <input type="text" id="editor-author" required>
+            <label>URL Miniaturki:</label> <input type="text" id="editor-thumbnail" required>
+            <label><input type="checkbox" id="editor-featured"> Wyróżniony?</label>
+            <label>Treść (HTML):</label> <textarea id="editor-content" rows="15" required></textarea>
             <div class="editor-actions">
-                <button type="submit">Zapisz Artykuł</button>
+                <button type="submit">Zapisz</button>
                 <button type="button" id="editor-cancel">Anuluj</button>
-                <button type="button" id="editor-delete" class="delete-button">USUŃ TEN ARTYKUŁ</button>
+                <button type="button" id="editor-delete" class="delete-button">USUŃ</button>
             </div>
         </form>
     </div>
-<!-- Nowy, zunifikowany Panel Admina -->
-<!-- =============================================== -->
-<!-- === NOWY, UNIWERSALNY PANEL UŻYTKOWNIKA ======= -->
-<!-- =============================================== -->
-<button id="user-panel-button">?</button>
 
-<div id="user-panel-view" class="hidden">
-    <div id="user-panel-box">
+    <!-- 3. FAB (Przycisk edycji) -->
+    <div id="fab-edit-article" class="fab-button hidden" title="Edytuj ten artykuł">✎</div>
 
-        <!-- === WIDOK DLA UŻYTKOWNIKA ZALOGOWANEGO === -->
-<div id="user-info-view" class="hidden">
-    <h3>Witaj, <span id="user-info-nick"></span>!</h3>
-
-    <!-- Zakładki Profilu -->
-    <div class="profile-tabs">
-        <button id="show-info-tab" class="active">Informacje ogólne</button>
-        <button id="show-perms-tab">Uprawnienia</button>
-    </div>
-
-    <!-- Treść Zakładek -->
-    <div class="profile-content">
-
-        <!-- Zakładka 1: Informacje i edycja -->
-        <!-- Zakładka 1: Informacje i edycja -->
-        <div id="profile-info-content">
-            <form id="profile-info-form">
-                <label for="profile-nick-input">Twój Nick:</label>
-                <input type="text" id="profile-nick-input" required>
-
-                <label for="profile-color-input">Twój Kolor Nicku:</label>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="color" id="profile-color-input" value="#ffffff">
-                    <span style="font-size: 12px; color: #aaa;">(Widoczny w komentarzach)</span>
-                </div>
-
-                <label for="profile-email-input">Twój Email:</label>
-                <input type="email" id="profile-email-input" disabled>
-                
-                <label>Twoja Ranga:</label>
-                <div id="user-current-role-badge" style="color: #ffdd4b; font-weight: bold; margin-bottom: 15px;">Wczytywanie...</div>
-
-                <button type="button" id="profile-reset-password-button">Zresetuj hasło (otrzymasz email)</button>
-                <button type="submit" id="profile-save-button">Zapisz zmiany</button>
-            </form>
-        </div>
-
-        <!-- Zakładka 2: Uprawnienia (na razie pusta) -->
-<!-- Zakładka 2: Zarządzanie Rolami (Widoczna tylko dla Admina) -->
-        <div id="profile-perms-content" class="hidden">
-            <h4>Zarządzanie Użytkownikami</h4>
-            <div class="admin-panel-section">
-                <label>Zmień rangę użytkownika (wpisz email):</label>
-                <input type="email" id="admin-user-email" placeholder="Email użytkownika">
-                <select id="admin-role-select">
-                    <!-- Opcje ładowane dynamicznie z bazy -->
-                </select>
-                <button id="admin-assign-role-btn">Nadaj Rangę</button>
-            </div>
-            
-            <hr style="border-color: #4a68a5; margin: 20px 0;">
-
-            <h4>Edytor Rang</h4>
-            <div class="admin-panel-section">
-                <label>Nazwa Rangi (ID):</label>
-                <input type="text" id="role-editor-name" placeholder="np. moderator">
-                
-                <div class="checkbox-group">
-                    <label><input type="checkbox" id="perm-write-articles"> Pisanie/Edycja Artykułów</label>
-                    <label><input type="checkbox" id="perm-delete-comments"> Usuwanie Komentarzy</label>
-                    <label><input type="checkbox" id="perm-manage-roles"> Zarządzanie Rolami</label>
-                </div>
-                
-                <button id="admin-save-role-btn">Zapisz/Aktualizuj Rangę</button>
-            </div>
-        </div>
-
-    <!-- Przyciski akcji (Dodaj art. i Wyloguj) -->
-    <hr style="border-color: #4a68a5; margin: 20px 0;">
-    <button id="user-panel-add-article" class="hidden">Dodaj nowy artykuł</button>
-    <button id="user-panel-logout">Wyloguj</button>
-    <button id="user-panel-cancel">Zamknij</button>
-</div>
-
-        <!-- === WIDOK DLA UŻYTKOWNIKA NIEZALOGOWANEGO === -->
-        <div id="auth-view">
-            <div class="auth-tabs">
-                <button id="show-login-tab" class="active">Logowanie</button>
-                <button id="show-register-tab">Rejestracja</button>
-            </div>
-
-            <!-- Formularz Logowania -->
-            <form id="login-form">
-                <input type="email" id="login-email" placeholder="Email" required>
-                <input type="password" id="login-password" placeholder="Hasło" required>
-                <button type="submit">Zaloguj</button>
-            </form>
-
-            <!-- Formularz Rejestracji -->
-            <form id="register-form" class="hidden">
-                <input type="text" id="register-nick" placeholder="Nick" required>
-                <input type="email" id="register-email" placeholder="Email" required>
-                <input type="password" id="register-password" placeholder="Hasło" required>
-                <button type="submit">Zarejestruj</button>
-            </form>
-             <button id="auth-cancel-button">Anuluj</button>
-        </div>
-    </div>
-</div>
-    <div id="fab-edit-article" class="fab-button hidden" title="Edytuj ten artykuł">
-    ✎
-</div>
-
-<!-- Panel Edytora (bez zmian) -->
-<div id="editor-view" class="hidden">
-    <!-- ... cała zawartość formularza edytora ... -->
-</div>
-    <!-- Ukryty Panel Edycji Komentarza -->
-<div id="comment-editor-view" class="hidden">
-    <div id="comment-editor-box">
-        <h4>Edytuj komentarz</h4>
-        <textarea id="comment-editor-textarea"></textarea>
-        <button id="comment-editor-save">Zapisz</button>
-        <button id="comment-editor-cancel">Anuluj</button>
-    </div>
-</div>
+    <!-- === SKRYPTY === -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -237,13 +188,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="script.js"></script>
 
-<footer style="text-align: center; padding: 10px; font-size: 12px; color: #aaa;">
-  This site is protected by reCAPTCHA and the Google
-  <a href="https://policies.google.com/privacy">Privacy Policy</a> and
-  <a href="https://policies.google.com/terms">Terms of Service</a> apply.
-    <div style="text-align: center; padding: 20px;">
-    <button id="clear-cache-btn">Wyczyść pamięć podręczną artykułów</button>
-</div>
-</footer>
+    <!-- === FOOTER (CAŁKOWICIE NA DOLE) === -->
+    <footer style="text-align: center; padding: 20px; font-size: 12px; color: #aaa; border-top: 1px solid #4a68a5; margin-top: 30px;">
+        This site is protected by reCAPTCHA and the Google
+        <a href="https://policies.google.com/privacy">Privacy Policy</a> and
+        <a href="https://policies.google.com/terms">Terms of Service</a> apply.
+        <div style="text-align: center; padding: 10px;">
+            <button id="clear-cache-btn">Wyczyść pamięć podręczną artykułów</button>
+        </div>
+    </footer>
 
-</body></html>
+</body>
+</html>
