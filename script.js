@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messagingSenderId: "610657374509",
         appId: "1:610657374509:web:1c90f0ba2ab8e0927183a4"
     };
+    const SUPER_ADMIN_UID = 'bNBvAM1hJef0k8YmQ7UlXscYiny2'; 
 
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
@@ -547,35 +548,69 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 8. ZARZĄDZANIE UŻYTKOWNIKAMI I ROLAMI =======================
     // =================================================================
 
-    function updateUserUI() {
+    // Funkcja tworząca domyślne role, jeśli baza jest pusta
+    function initializeDefaultRoles() {
+        database.ref('roles_config').once('value', snapshot => {
+            if (!snapshot.exists()) {
+                console.log("Inicjalizacja domyślnych ról...");
+                const defaultRoles = {
+                    admin: {
+                        can_write_articles: true,
+                        can_delete_comments: true,
+                        can_manage_roles: true
+                    },
+                    user: {
+                        can_write_articles: false,
+                        can_delete_comments: false,
+                        can_manage_roles: false
+                    }
+                };
+                database.ref('roles_config').set(defaultRoles);
+            }
+        });
+    }
+
+function updateUserUI() {
         if (state.currentUser) {
-            // Zalogowany
+            // === ZALOGOWANY ===
             elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
             elements.userPanel.button.style.backgroundColor = state.currentUser.color || '#4a68a5';
             
             elements.userPanel.nickSpan.textContent = state.currentUser.nick;
             elements.userPanel.nickSpan.style.color = state.currentUser.color || '#fff';
             
+            // Pokazujemy rangę
             elements.userPanel.userRoleBadge.textContent = (state.currentUser.role || 'user').toUpperCase();
+            if (state.currentUser.role === 'admin') elements.userPanel.userRoleBadge.style.color = 'red';
+            else elements.userPanel.userRoleBadge.style.color = '#ffdd4b';
             
+            // Przełączanie widoków wewnątrz panelu
             elements.userPanel.infoView.classList.remove('hidden');
             elements.userPanel.authView.classList.add('hidden');
 
-            // Wypełnij formularz profilu
+            // Wypełnij formularz
             elements.userPanel.profileNickInput.value = state.currentUser.nick;
             elements.userPanel.profileEmailInput.value = state.currentUser.email;
             elements.userPanel.profileColorInput.value = state.currentUser.color || '#ffffff';
 
-            // Komentarze: ustaw nick i zablokuj
+            // Komentarze
             elements.commentSection.nameInput.value = state.currentUser.nick;
-            elements.commentSection.nameInput.disabled = false; // Pozwalamy na edycję, ale z walidacją
+            // elements.commentSection.nameInput.disabled = true; // Opcjonalnie: zablokuj zmianę nicku w komentarzu
 
         } else {
-            // Niezalogowany
+            // === NIEZALOGOWANY (GOŚĆ) ===
             elements.userPanel.button.textContent = '?';
             elements.userPanel.button.style.backgroundColor = '#4a68a5';
+            
+            // Ukrywamy panel info, pokazujemy logowanie
             elements.userPanel.infoView.classList.add('hidden');
             elements.userPanel.authView.classList.remove('hidden');
+            
+            // Domyślnie pokaż zakładkę logowania
+            elements.userPanel.loginForm.classList.remove('hidden');
+            elements.userPanel.registerForm.classList.add('hidden');
+            elements.userPanel.showLoginTab.classList.add('active');
+            elements.userPanel.showRegisterTab.classList.remove('active');
 
             elements.commentSection.nameInput.value = '';
             elements.commentSection.nameInput.disabled = false;
@@ -682,9 +717,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 9. INICJALIZACJA I OBSŁUGA ZDARZEŃ ==========================
     // =================================================================
 
-    function initializeAuth() {
+function initializeAuth() {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
+                // Pobieramy dane użytkownika
                 const userRef = database.ref(`users/${user.uid}`);
                 const snap = await userRef.once('value');
                 const profile = snap.val() || {};
@@ -694,16 +730,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     email: user.email,
                     nick: profile.nick || 'Użytkownik',
                     color: profile.color || '#ffffff',
-                    role: profile.role || 'user'
+                    role: profile.role || 'user' // Domyślnie user, jeśli brak w bazie
                 };
             } else {
                 state.currentUser = null;
             }
             
-            calculatePermissions();
-            updateUserUI();
+            calculatePermissions(); // Przelicz uprawnienia (ważne dla Super Admina)
+            updateUserUI();       // Odśwież widok
         });
     }
+
+    function init() {
+        state.localUserId = getOrCreateLocalUserId();
+        bindEventListeners();
+        initializeAuth();
+        loadInitialArticles();
+        initializeDefaultRoles(); // <--- DODAJ TO, ABY STWORZYĆ ROLE W BAZIE
+    }
+    
+    // Na samym dole pliku wywołanie:
+    init();
 
     function loadInitialArticles() {
         // Podstawowa konfiguracja ról
@@ -984,3 +1031,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeAuth();
     loadInitialArticles();
 });
+
