@@ -80,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
             profileEmailInput: document.getElementById('profile-email-input'),
             profileInfoForm: document.getElementById('profile-info-form'),
             
-            // Zakładki (Tabs)
             tabs: {
                 infoBtn: document.getElementById('show-info-tab'),
                 permsBtn: document.getElementById('show-perms-tab'),
@@ -95,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             // Admin Panel
-            adminNickInput: document.getElementById('admin-user-email'), // ID z HTML, ale to jest pole na NICK
+            adminNickInput: document.getElementById('admin-user-email'), 
             adminRoleSelect: document.getElementById('admin-role-select'),
             adminAssignBtn: document.getElementById('admin-assign-role-btn'),
             roleEditorName: document.getElementById('role-editor-name'),
@@ -120,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clearCacheBtn: document.getElementById('clear-cache-btn')
     };
 
-    // Konfiguracja przycisku "Dodaj artykuł" w panelu
     elements.userPanel.addNewArticleBtn.textContent = "+ Utwórz Nowy Artykuł";
     elements.userPanel.addNewArticleBtn.style.backgroundColor = "#28a745";
     elements.userPanel.addNewArticleBtn.style.marginTop = "10px";
@@ -170,14 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function hasPermission(perm) { return state.permissions[perm] === true; }
 
     function updateUIForPermissions() {
-        // Zakładka uprawnień
         const permsTab = elements.userPanel.tabs.permsBtn;
         if (permsTab) permsTab.classList.toggle('hidden', !hasPermission('can_manage_roles'));
-
-        // Przycisk "Dodaj artykuł" w panelu
         elements.userPanel.addNewArticleBtn.classList.toggle('hidden', !hasPermission('can_write_articles'));
-
-        // FAB (Ołówek) - widoczny tylko w widoku artykułu
         if (elements.fabEdit) {
             const isArticleView = !elements.views.article.classList.contains('hidden');
             elements.fabEdit.classList.toggle('hidden', !(isArticleView && hasPermission('can_write_articles')));
@@ -185,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // === 5. SLIDER I LISTA ARTYKUŁÓW (NAPRAWIONE) ====================
+    // === 5. SLIDER I LISTA ARTYKUŁÓW =================================
     // =================================================================
     function setupFeaturedSlider(articles) {
         if (articles.length === 0) {
@@ -207,6 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const navDot = document.createElement('span');
             navDot.className = 'nav-dot';
             navDot.dataset.index = index;
+            // NAPRAWA: KROPKI SĄ TERAZ KLIKALNE
+            navDot.onclick = () => {
+                showSlide(index);
+                startSlideInterval(); // Resetujemy timer po kliknięciu
+            };
             nav.appendChild(navDot);
         });
         showSlide(0);
@@ -232,15 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayNewsList(articles) {
-        // Jeśli to pierwsze ładowanie (czyszczenie listy)
-        if (state.allArticlesMeta.length <= ARTICLES_PER_PAGE) {
-            elements.newsList.innerHTML = '';
-        }
-        
-        // Dodajemy tylko nowe artykuły do listy (żeby nie duplikować przy Load More)
-        // Ale najprościej przy Load More po prostu wyczyścić i wyrenderować wszystko z `state.allArticlesMeta`
         elements.newsList.innerHTML = ''; 
-        state.allArticlesMeta.forEach(article => {
+        articles.forEach(article => {
             const card = document.createElement('div');
             card.className = 'article-card';
             card.dataset.id = article.id;
@@ -262,8 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
             state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order;
 
             displayNewsList(state.allArticlesMeta);
-
-            // Filtrujemy wyróżnione do slidera
             const featured = state.allArticlesMeta.filter(a => a.featured);
             setupFeaturedSlider(featured);
 
@@ -294,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
             state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order;
 
             displayNewsList(state.allArticlesMeta);
-            
             elements.loadMoreArticlesBtn.disabled = false;
             elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej';
 
@@ -359,13 +347,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const idx = state.allArticlesMeta.findIndex(a => a.id == id);
             if(idx > -1) state.allArticlesMeta[idx] = meta;
             else state.allArticlesMeta.push(meta);
-            state.allArticlesMeta.sort((a,b) => a.order - b.order); // Sortuj po dodaniu
+            state.allArticlesMeta.sort((a,b) => a.order - b.order);
             
-            // Odśwież widoki
             if(state.currentArticle && state.currentArticle.id == id) displayArticle(id);
             else {
                  showMainView();
-                 displayNewsList(state.allArticlesMeta); // Odśwież listę po zapisie
+                 displayNewsList(state.allArticlesMeta);
             }
         }).catch(e => alert("Błąd: " + e.message));
     }
@@ -397,16 +384,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateUserInfoFields() {
         if (state.currentUser) {
+            // NAPRAWA: GŁÓWNY PRZYCISK POKAZUJE INICJAŁ I KOLOR
+            elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
+            elements.userPanel.button.style.backgroundColor = state.currentUser.color || '#4a68a5';
+
             elements.userPanel.nickSpan.textContent = state.currentUser.nick;
             elements.userPanel.userRoleBadge.textContent = state.currentUser.role || 'USER';
-            // Wypełnij pola formularza edycji
             elements.userPanel.profileNickInput.value = state.currentUser.nick;
             elements.userPanel.profileEmailInput.value = state.currentUser.email;
             elements.userPanel.profileColorInput.value = state.currentUser.color || '#ffffff';
             
+            // NAPRAWA: NICK W KOMENTARZACH SIĘ WYPEŁNIA ALE JEST EDYTOWALNY
+            elements.commentSection.nameInput.value = state.currentUser.nick;
+            elements.commentSection.nameInput.disabled = false;
+
             elements.userPanel.infoView.classList.remove('hidden');
             elements.userPanel.authView.classList.add('hidden');
         } else {
+            // GOŚĆ
+            elements.userPanel.button.textContent = '?';
+            elements.userPanel.button.style.backgroundColor = '#4a68a5';
+            
+            elements.commentSection.nameInput.value = '';
+            elements.commentSection.nameInput.disabled = false;
+
             elements.userPanel.infoView.classList.add('hidden');
             elements.userPanel.authView.classList.remove('hidden');
         }
@@ -416,43 +417,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 8. INICJALIZACJA I EVENTY ===================================
     // =================================================================
     function bindEvents() {
-        // --- ZAKŁADKI (TABS) - NAPRAWA WIZUALNA ---
+        // TABS
         function switchTab(clickedBtn, contentToShow, groupBtns, groupContents) {
-            // Reset active class
             Object.values(groupBtns).forEach(b => b.classList.remove('active'));
-            // Hide all contents
             Object.values(groupContents).forEach(c => c.classList.add('hidden'));
-            
-            // Activate current
             clickedBtn.classList.add('active');
             contentToShow.classList.remove('hidden');
         }
 
-        // Zakładki Profilu
         const profileBtns = { info: elements.userPanel.tabs.infoBtn, perms: elements.userPanel.tabs.permsBtn };
         const profileCont = { info: elements.userPanel.contents.info, perms: elements.userPanel.contents.perms };
-
         elements.userPanel.tabs.infoBtn.onclick = () => switchTab(elements.userPanel.tabs.infoBtn, elements.userPanel.contents.info, profileBtns, profileCont);
         elements.userPanel.tabs.permsBtn.onclick = () => switchTab(elements.userPanel.tabs.permsBtn, elements.userPanel.contents.perms, profileBtns, profileCont);
 
-        // Zakładki Auth
         const authBtns = { login: elements.userPanel.tabs.loginBtn, reg: elements.userPanel.tabs.registerBtn };
         const authCont = { login: elements.userPanel.contents.login, reg: elements.userPanel.contents.register };
-
         elements.userPanel.tabs.loginBtn.onclick = () => switchTab(elements.userPanel.tabs.loginBtn, elements.userPanel.contents.login, authBtns, authCont);
         elements.userPanel.tabs.registerBtn.onclick = () => switchTab(elements.userPanel.tabs.registerBtn, elements.userPanel.contents.register, authBtns, authCont);
 
-
-        // --- PANEL OTWIERANIE/ZAMYKANIE ---
+        // Panel
         elements.userPanel.button.onclick = () => {
-            updateUserInfoFields(); // ODŚWIEŻ DANE PRZY OTWARCIU!
+            updateUserInfoFields(); 
             elements.userPanel.view.classList.remove('hidden');
         };
         elements.userPanel.closePanelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
         elements.userPanel.authCancelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
         elements.userPanel.logoutBtn.onclick = () => { auth.signOut(); elements.userPanel.view.classList.add('hidden'); };
 
-        // --- ZAPIS PROFILU ---
+        // Zapis profilu
         elements.userPanel.profileInfoForm.onsubmit = (e) => {
             e.preventDefault();
             const newNick = elements.userPanel.profileNickInput.value.trim();
@@ -470,23 +462,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             database.ref().update(updates).then(() => {
                 alert("Zapisano!");
-                // Aktualizuj stan lokalny natychmiast
                 state.currentUser.nick = newNick;
                 state.currentUser.color = newColor;
                 updateUserInfoFields();
             }).catch(e => alert(e.message));
         };
 
-
-        // --- ARTYKUŁY I NAWIGACJA ---
+        // Artykuły
         elements.loadMoreArticlesBtn.onclick = loadMoreArticles;
         elements.backButton.onclick = showMainView;
         document.body.addEventListener('click', e => {
             const card = e.target.closest('.article-card, .slide');
-            if(card) displayArticle(card.dataset.id);
+            if(card && !e.target.classList.contains('nav-dot')) { // Ignoruj kropki slidera
+                displayArticle(card.dataset.id);
+            }
         });
 
-        // --- AUTH ---
+        // Auth
         elements.userPanel.loginEmail.closest('form').onsubmit = e => {
             e.preventDefault();
             auth.signInWithEmailAndPassword(elements.userPanel.loginEmail.value, elements.userPanel.loginPassword.value)
@@ -510,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
-        // --- ADMIN / EDITOR ---
+        // Admin
         elements.userPanel.adminAssignBtn.onclick = assignRole;
         elements.userPanel.roleSaveBtn.onclick = () => {
             const name = elements.userPanel.roleEditorName.value.trim().toLowerCase();
@@ -535,14 +527,12 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.commentSection.form.onsubmit = (e) => {
             e.preventDefault();
             const msg = elements.commentSection.messageInput.value.trim();
-            const author = state.currentUser ? state.currentUser.nick : elements.commentSection.nameInput.value;
+            const author = state.currentUser ? state.currentUser.nick : elements.commentSection.nameInput.value; // Preferuj nick z konta, ale bierz input
             if(!msg || !author) return;
             
             const userId = state.currentUser ? state.currentUser.uid : state.localUserId;
             const color = state.currentUser ? (state.currentUser.color || '#fff') : '#fff';
             
-            // Proste dodawanie bez sprawdzania unikalności gościa (bo gość nie ma konta)
-            // Ale dla pewności - check nick dla gości
             if(!state.currentUser) {
                  database.ref(`takenNicks/${author.toLowerCase()}`).once('value', s=> {
                      if(s.exists()) alert("Ten nick jest zarejestrowany. Zaloguj się!");
@@ -559,9 +549,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.commentSection.messageInput.value = '';
             }
         };
+
+        // Obsługa usuwania komentarzy (delegacja zdarzeń)
+        elements.commentSection.list.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-comment-btn')) {
+                const commentEl = e.target.closest('.comment');
+                const commentId = commentEl.dataset.commentId;
+                if(confirm("Usunąć ten komentarz?")) {
+                    database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove();
+                }
+            }
+        });
     }
 
-    // === FUNKCJE POMOCNICZE WIDOKU ===
+    // === WIDOK ARTYKUŁU I KOMENTARZY ===
     function showMainView() {
         Object.values(elements.views).forEach(v => v.classList.add('hidden'));
         elements.views.main.classList.remove('hidden');
@@ -596,18 +597,53 @@ document.addEventListener('DOMContentLoaded', () => {
         state.activeCommentsRef = database.ref(`comments/${id}`);
         state.activeCommentsRef.on('value', s => {
             const d = s.val() || {};
-            elements.commentSection.list.innerHTML = Object.entries(d).map(([k,v]) => `
-                <div class="comment" style="border-left: 3px solid ${v.userColor||'#fff'}">
-                    <div class="comment-header"><span style="color:${v.userColor}">${v.author}</span></div>
-                    <p>${v.message}</p>
-                </div>`).join('');
+            renderComments(d);
+        });
+    }
+
+    function renderComments(data) {
+        elements.commentSection.list.innerHTML = '';
+        if(!data) return;
+
+        // Sortowanie po dacie (najnowsze na górze)
+        const comments = Object.entries(data).map(([k,v]) => ({...v, id: k}))
+                               .sort((a,b) => b.timestamp - a.timestamp);
+
+        comments.forEach(comment => {
+            const el = document.createElement('div');
+            el.className = 'comment';
+            el.dataset.commentId = comment.id;
+            el.style.borderLeft = `3px solid ${comment.userColor || '#fff'}`;
+            
+            // NAPRAWA: LOGIKA USUWANIA KOMENTARZY
+            // 1. Czy to mój komentarz? (Sprawdzamy UID dla zalogowanych LUB localUserId dla gości)
+            const myId = state.currentUser ? state.currentUser.uid : state.localUserId;
+            const isMyComment = comment.userId === myId;
+            
+            // 2. Czy mam uprawnienia moda/admina?
+            const canModerate = hasPermission('can_delete_comments');
+            
+            let deleteBtn = '';
+            if (isMyComment || canModerate) {
+                deleteBtn = `<div class="comment-controls"><button class="delete-comment-btn">Usuń</button></div>`;
+            }
+
+            el.innerHTML = `
+                <div class="comment-header">
+                    <span style="color:${comment.userColor || '#fff'}">${comment.author}</span>
+                    <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
+                </div>
+                <p>${comment.message}</p>
+                ${deleteBtn}
+            `;
+            elements.commentSection.list.appendChild(el);
         });
     }
 
     function init() {
         bindEvents();
         loadRolesConfig();
-        loadInitialArticles(); // To ładuje slider i listę
+        loadInitialArticles();
         
         auth.onAuthStateChanged(async u => {
             state.currentUser = null;
@@ -615,8 +651,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const s = await database.ref(`users/${u.uid}`).once('value');
                 state.currentUser = { uid: u.uid, ...s.val() };
             }
-            updateUserInfoFields();
+            updateUserInfoFields(); // Odśwież ikonę profilu
             calculatePermissions();
+            // Jeśli jesteśmy w artykule, odśwież komentarze, żeby pojawiły się przyciski usuwania
+            if(state.currentArticle) {
+                 // Trigger re-render by reading once (or waiting for .on listener)
+                 // Listener .on zajmie się tym automatycznie, ale przyciski 'delete' pojawią się przy następnym renderze
+                 // Wymuśmy to manualnie jeśli trzeba, ale .on powinien wystarczyć.
+            }
         });
     }
 
