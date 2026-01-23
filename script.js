@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- KONFIGURACJA SUPER ADMINA ---
     // Tu wpisz swoje UID (znajdziesz je w Firebase Console -> Authentication)
     // Dzięki temu będziesz miał dostęp do panelu rang nawet jak baza jest pusta.
-    const SUPER_ADMIN_UID = 'L6GXbvAZw9aJ7uPCJRcD5brocl83'; 
+    const SUPER_ADMIN_UID = 'bNBvAM1hJef0k8YmQ7UlXscYiny2'; 
 
     // =================================================================
     // === 2. ELEMENTY DOM =============================================
@@ -1034,3 +1034,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     init();
 });
+
