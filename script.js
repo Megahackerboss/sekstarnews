@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // === 1. KONFIGURACJA ===
+    // =================================================================
+    // === 1. KONFIGURACJA =============================================
+    // =================================================================
     const firebaseConfig = {
         apiKey: "AIzaSyCdc6Xzk_upgrUPX5g6bWAIzgYSQGpyPBY",
         authDomain: "sekstarnews.firebaseapp.com",
@@ -17,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const ARTICLES_PER_PAGE = 5;
     const COMMENTS_PER_PAGE = 5;
 
-    // === 2. ELEMENTY DOM ===
+    // =================================================================
+    // === 2. ELEMENTY DOM =============================================
+    // =================================================================
     const elements = {
         views: { 
             main: document.getElementById('main-view'), 
@@ -66,11 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
         userPanel: {
             button: document.getElementById('user-panel-button'),
             view: document.getElementById('user-panel-view'),
-            // Widoki wewnątrz panelu
             infoView: document.getElementById('user-info-view'),
             authView: document.getElementById('auth-view'),
             
-            // Pola profilu
             nickSpan: document.getElementById('user-info-nick'),
             userRoleBadge: document.getElementById('user-current-role-badge'),
             profileNickInput: document.getElementById('profile-nick-input'),
@@ -78,8 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
             profileEmailInput: document.getElementById('profile-email-input'),
             profileInfoForm: document.getElementById('profile-info-form'),
             
-            // Zakładki
-            tabs: document.querySelectorAll('.profile-tabs button, .auth-tabs button'),
+            // Zakładki (Tabs)
+            tabs: {
+                infoBtn: document.getElementById('show-info-tab'),
+                permsBtn: document.getElementById('show-perms-tab'),
+                loginBtn: document.getElementById('show-login-tab'),
+                registerBtn: document.getElementById('show-register-tab')
+            },
             contents: {
                 info: document.getElementById('profile-info-content'),
                 perms: document.getElementById('profile-perms-content'),
@@ -88,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             // Admin Panel
-            adminEmailInput: document.getElementById('admin-user-email'), // Zostawiamy ID w HTML, ale używamy jako NICK
+            adminNickInput: document.getElementById('admin-user-email'), // ID z HTML, ale to jest pole na NICK
             adminRoleSelect: document.getElementById('admin-role-select'),
             adminAssignBtn: document.getElementById('admin-assign-role-btn'),
             roleEditorName: document.getElementById('role-editor-name'),
@@ -97,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rolePermManage: document.getElementById('perm-manage-roles'),
             roleSaveBtn: document.getElementById('admin-save-role-btn'),
             
-            // Auth form inputs
+            // Auth inputs
             loginEmail: document.getElementById('login-email'),
             loginPassword: document.getElementById('login-password'),
             registerNick: document.getElementById('register-nick'),
@@ -108,21 +115,21 @@ document.addEventListener('DOMContentLoaded', () => {
             closePanelBtn: document.getElementById('user-panel-cancel'),
             authCancelBtn: document.getElementById('auth-cancel-button'),
             
-            // NOWY PRZYCISK
             addNewArticleBtn: document.createElement('button') 
         },
         clearCacheBtn: document.getElementById('clear-cache-btn')
     };
 
-    // Dodanie przycisku "Dodaj artykuł" do panelu admina
+    // Konfiguracja przycisku "Dodaj artykuł" w panelu
     elements.userPanel.addNewArticleBtn.textContent = "+ Utwórz Nowy Artykuł";
     elements.userPanel.addNewArticleBtn.style.backgroundColor = "#28a745";
     elements.userPanel.addNewArticleBtn.style.marginTop = "10px";
-    elements.userPanel.addNewArticleBtn.className = "hidden"; // Domyślnie ukryty
-    // Wstawiamy go pod sekcją zarządzania użytkownikami
+    elements.userPanel.addNewArticleBtn.className = "hidden";
     document.querySelector('#profile-perms-content').prepend(elements.userPanel.addNewArticleBtn);
 
-    // === 3. STAN ===
+    // =================================================================
+    // === 3. STAN APLIKACJI ===========================================
+    // =================================================================
     let state = {
         allArticlesMeta: [],
         lastLoadedArticleOrder: null,
@@ -133,11 +140,15 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser: null,
         localUserId: localStorage.getItem('localUserId') || `guest_${Math.random().toString(36).substr(2, 9)}`,
         rolesConfig: {},
-        permissions: { can_write_articles: false, can_delete_comments: false, can_manage_roles: false }
+        permissions: { can_write_articles: false, can_delete_comments: false, can_manage_roles: false },
+        sliderInterval: null,
+        currentSlideIndex: 0
     };
     if(!localStorage.getItem('localUserId')) localStorage.setItem('localUserId', state.localUserId);
 
-    // === 4. LOGIKA UPRAWNIEŃ ===
+    // =================================================================
+    // === 4. LOGIKA UPRAWNIEŃ I DANYCH ================================
+    // =================================================================
     function loadRolesConfig() {
         database.ref('roles_config').on('value', snap => {
             state.rolesConfig = snap.val() || {};
@@ -160,24 +171,146 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateUIForPermissions() {
         // Zakładka uprawnień
-        const permsTab = document.getElementById('show-perms-tab');
+        const permsTab = elements.userPanel.tabs.permsBtn;
         if (permsTab) permsTab.classList.toggle('hidden', !hasPermission('can_manage_roles'));
 
         // Przycisk "Dodaj artykuł" w panelu
         elements.userPanel.addNewArticleBtn.classList.toggle('hidden', !hasPermission('can_write_articles'));
 
-        // FAB (Ołówek)
+        // FAB (Ołówek) - widoczny tylko w widoku artykułu
         if (elements.fabEdit) {
             const isArticleView = !elements.views.article.classList.contains('hidden');
             elements.fabEdit.classList.toggle('hidden', !(isArticleView && hasPermission('can_write_articles')));
         }
     }
 
-    // === 5. EDYTOR ===
+    // =================================================================
+    // === 5. SLIDER I LISTA ARTYKUŁÓW (NAPRAWIONE) ====================
+    // =================================================================
+    function setupFeaturedSlider(articles) {
+        if (articles.length === 0) {
+            elements.slider.container.style.display = 'none';
+            return;
+        }
+        elements.slider.container.style.display = 'block';
+        elements.slider.container.innerHTML = `<div class="slider-content"></div><div class="slider-nav"></div>`;
+        const content = elements.slider.container.querySelector('.slider-content');
+        const nav = elements.slider.container.querySelector('.slider-nav');
+        
+        articles.forEach((article, index) => {
+            const slide = document.createElement('div');
+            slide.className = 'slide';
+            slide.dataset.id = article.id;
+            slide.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="slide-title">${article.title}</div>`;
+            content.appendChild(slide);
+            
+            const navDot = document.createElement('span');
+            navDot.className = 'nav-dot';
+            navDot.dataset.index = index;
+            nav.appendChild(navDot);
+        });
+        showSlide(0);
+        startSlideInterval();
+    }
+
+    function showSlide(index) {
+        const slides = elements.slider.container.querySelectorAll('.slide');
+        const dots = elements.slider.container.querySelectorAll('.nav-dot');
+        if (!slides.length) return;
+        if (index >= slides.length) index = 0;
+        if (index < 0) index = slides.length - 1;
+        slides.forEach(s => s.classList.remove('active'));
+        dots.forEach(d => d.classList.remove('active'));
+        if (slides[index]) slides[index].classList.add('active');
+        if (dots[index]) dots[index].classList.add('active');
+        state.currentSlideIndex = index;
+    }
+
+    function startSlideInterval() {
+        clearInterval(state.sliderInterval);
+        state.sliderInterval = setInterval(() => showSlide(state.currentSlideIndex + 1), 8000);
+    }
+
+    function displayNewsList(articles) {
+        // Jeśli to pierwsze ładowanie (czyszczenie listy)
+        if (state.allArticlesMeta.length <= ARTICLES_PER_PAGE) {
+            elements.newsList.innerHTML = '';
+        }
+        
+        // Dodajemy tylko nowe artykuły do listy (żeby nie duplikować przy Load More)
+        // Ale najprościej przy Load More po prostu wyczyścić i wyrenderować wszystko z `state.allArticlesMeta`
+        elements.newsList.innerHTML = ''; 
+        state.allArticlesMeta.forEach(article => {
+            const card = document.createElement('div');
+            card.className = 'article-card';
+            card.dataset.id = article.id;
+            card.innerHTML = `<img src="${article.thumbnail}" alt="${article.title}"><div class="article-card-content"><h4>${article.title}</h4></div>`;
+            elements.newsList.appendChild(card);
+        });
+    }
+
+    function loadInitialArticles() {
+        let query = database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE);
+        query.once('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) {
+                elements.loadMoreArticlesBtn.classList.add('hidden');
+                return;
+            }
+            const newArticles = Object.values(data).sort((a, b) => (a.order || 999) - (b.order || 999));
+            state.allArticlesMeta = newArticles;
+            state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order;
+
+            displayNewsList(state.allArticlesMeta);
+
+            // Filtrujemy wyróżnione do slidera
+            const featured = state.allArticlesMeta.filter(a => a.featured);
+            setupFeaturedSlider(featured);
+
+            if (newArticles.length < ARTICLES_PER_PAGE) {
+                state.areAllArticlesLoaded = true;
+                elements.loadMoreArticlesBtn.classList.add('hidden');
+            } else {
+                elements.loadMoreArticlesBtn.classList.remove('hidden');
+            }
+        });
+    }
+
+    function loadMoreArticles() {
+        if (state.areAllArticlesLoaded) return;
+        elements.loadMoreArticlesBtn.disabled = true;
+        elements.loadMoreArticlesBtn.textContent = 'Ładowanie...';
+
+        let query = database.ref('articles_meta').orderByChild('order').startAfter(state.lastLoadedArticleOrder).limitToFirst(ARTICLES_PER_PAGE);
+        query.once('value', snapshot => {
+            const data = snapshot.val();
+            if (!data) {
+                state.areAllArticlesLoaded = true;
+                elements.loadMoreArticlesBtn.classList.add('hidden');
+                return;
+            }
+            const newArticles = Object.values(data).sort((a, b) => (a.order || 999) - (b.order || 999));
+            state.allArticlesMeta.push(...newArticles);
+            state.lastLoadedArticleOrder = newArticles[newArticles.length - 1].order;
+
+            displayNewsList(state.allArticlesMeta);
+            
+            elements.loadMoreArticlesBtn.disabled = false;
+            elements.loadMoreArticlesBtn.textContent = 'Wczytaj więcej';
+
+            if (newArticles.length < ARTICLES_PER_PAGE) {
+                state.areAllArticlesLoaded = true;
+                elements.loadMoreArticlesBtn.classList.add('hidden');
+            }
+        });
+    }
+
+    // =================================================================
+    // === 6. EDYTOR I ZARZĄDZANIE =====================================
+    // =================================================================
     function openEditor(article = null) {
         if (!hasPermission('can_write_articles')) return alert("Brak uprawnień!");
-        
-        elements.userPanel.view.classList.add('hidden'); // Schowaj panel usera
+        elements.userPanel.view.classList.add('hidden');
         elements.editorForm.form.reset();
 
         if (article) {
@@ -189,19 +322,16 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.editorForm.thumbnailInput.value = article.thumbnail;
             elements.editorForm.featuredCheckbox.checked = article.featured;
             elements.editorForm.deleteButton.classList.remove('hidden');
-            
             database.ref(`articles_content/${article.id}`).once('value', s => {
                 elements.editorForm.contentInput.value = s.val() ? s.val().content : '';
             });
         } else {
-            // Nowy
             elements.editorForm.idInput.value = Date.now();
             elements.editorForm.orderInput.value = 1;
             elements.editorForm.dateInput.value = new Date().toLocaleString('pl-PL');
-            elements.editorForm.authorInput.value = state.currentUser.nick;
+            elements.editorForm.authorInput.value = state.currentUser ? state.currentUser.nick : 'Admin';
             elements.editorForm.deleteButton.classList.add('hidden');
         }
-
         Object.values(elements.views).forEach(v => v.classList.add('hidden'));
         elements.views.editor.classList.remove('hidden');
     }
@@ -220,27 +350,29 @@ document.addEventListener('DOMContentLoaded', () => {
             lastUpdated: Date.now()
         };
         const content = { content: elements.editorForm.contentInput.value };
-
         const updates = {};
         updates[`/articles_meta/${id}`] = meta;
         updates[`/articles_content/${id}`] = content;
 
-        database.ref().update(updates)
-            .then(() => {
-                alert("Zapisano!");
-                // Odśwież listę lokalnie
-                const idx = state.allArticlesMeta.findIndex(a => a.id == id);
-                if(idx > -1) state.allArticlesMeta[idx] = meta;
-                else state.allArticlesMeta.push(meta);
-                
-                // Jeśli edytowaliśmy bieżący, odśwież widok
-                if(state.currentArticle && state.currentArticle.id == id) displayArticle(id);
-                else showMainView();
-            })
-            .catch(e => alert("Błąd zapisu: " + e.message + "\nSprawdź czy masz rangę w bazie!"));
+        database.ref().update(updates).then(() => {
+            alert("Zapisano!");
+            const idx = state.allArticlesMeta.findIndex(a => a.id == id);
+            if(idx > -1) state.allArticlesMeta[idx] = meta;
+            else state.allArticlesMeta.push(meta);
+            state.allArticlesMeta.sort((a,b) => a.order - b.order); // Sortuj po dodaniu
+            
+            // Odśwież widoki
+            if(state.currentArticle && state.currentArticle.id == id) displayArticle(id);
+            else {
+                 showMainView();
+                 displayNewsList(state.allArticlesMeta); // Odśwież listę po zapisie
+            }
+        }).catch(e => alert("Błąd: " + e.message));
     }
 
-    // === 6. ZARZĄDZANIE ROLEMI (PO NICKU) ===
+    // =================================================================
+    // === 7. PANEL UŻYTKOWNIKA I UI ===================================
+    // =================================================================
     function populateRoleSelect() {
         const sel = elements.userPanel.adminRoleSelect;
         sel.innerHTML = '';
@@ -250,16 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function assignRole() {
-        // Zmieniliśmy ID inputa w HTML na 'admin-user-email', ale traktujemy go jako NICK
-        const nickToFind = elements.userPanel.adminEmailInput.value.trim(); 
+        const nickToFind = elements.userPanel.adminNickInput.value.trim();
         const roleName = elements.userPanel.adminRoleSelect.value;
-        
         if(!nickToFind) return alert("Podaj nick!");
 
-        // Szukamy UID po niku
         database.ref('users').orderByChild('nick').equalTo(nickToFind).once('value', snap => {
-            if (!snap.exists()) return alert("Nie znaleziono użytkownika o takim niku!");
-            
+            if (!snap.exists()) return alert("Nie znaleziono takiego nicku!");
             const uid = Object.keys(snap.val())[0];
             database.ref(`users/${uid}/role`).set(roleName)
                 .then(() => alert(`Nadano rangę ${roleName} dla ${nickToFind}`))
@@ -267,111 +395,98 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === 7. UI I NAWIGACJA ===
-    function showMainView() {
-        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
-        elements.views.main.classList.remove('hidden');
-        elements.backButton.classList.add('hidden');
-        state.currentArticle = null;
-        updateUIForPermissions(); // Ukryj FAB
-    }
-
-    async function displayArticle(id) {
-        let meta = state.allArticlesMeta.find(a => a.id == id);
-        if(!meta) {
-            try {
-                const s = await database.ref(`articles_meta/${id}`).once('value');
-                meta = s.val();
-                if(meta) state.allArticlesMeta.push(meta);
-            } catch(e) {}
-        }
-        if(!meta) return showMainView();
-
-        state.currentArticle = meta;
-        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
-        elements.views.article.classList.remove('hidden');
-        elements.backButton.classList.remove('hidden');
-        updateUIForPermissions(); // Pokaż FAB
-
-        elements.articleDetail.date.textContent = meta.date;
-        elements.articleDetail.author.textContent = meta.author;
-        
-        // Cache content
-        const cached = JSON.parse(localStorage.getItem(`article_${id}`));
-        if(cached && cached.lastUpdated >= meta.lastUpdated) {
-            elements.articleDetail.content.innerHTML = cached.content;
+    function updateUserInfoFields() {
+        if (state.currentUser) {
+            elements.userPanel.nickSpan.textContent = state.currentUser.nick;
+            elements.userPanel.userRoleBadge.textContent = state.currentUser.role || 'USER';
+            // Wypełnij pola formularza edycji
+            elements.userPanel.profileNickInput.value = state.currentUser.nick;
+            elements.userPanel.profileEmailInput.value = state.currentUser.email;
+            elements.userPanel.profileColorInput.value = state.currentUser.color || '#ffffff';
+            
+            elements.userPanel.infoView.classList.remove('hidden');
+            elements.userPanel.authView.classList.add('hidden');
         } else {
-            elements.articleDetail.content.innerHTML = "Ładowanie...";
-            database.ref(`articles_content/${id}`).once('value', s => {
-                const c = s.val() ? s.val().content : '';
-                elements.articleDetail.content.innerHTML = c;
-                localStorage.setItem(`article_${id}`, JSON.stringify({content: c, lastUpdated: meta.lastUpdated}));
-            });
+            elements.userPanel.infoView.classList.add('hidden');
+            elements.userPanel.authView.classList.remove('hidden');
         }
-        
-        listenForComments(id);
     }
 
-    // === 8. INICJALIZACJA ===
+    // =================================================================
+    // === 8. INICJALIZACJA I EVENTY ===================================
+    // =================================================================
     function bindEvents() {
-        // Panel Admina - Zmiana Etykiety
-        const label = document.querySelector('label[for="admin-user-email"]');
-        if(label) label.textContent = "Zmień rangę użytkownika (wpisz NICK):";
+        // --- ZAKŁADKI (TABS) - NAPRAWA WIZUALNA ---
+        function switchTab(clickedBtn, contentToShow, groupBtns, groupContents) {
+            // Reset active class
+            Object.values(groupBtns).forEach(b => b.classList.remove('active'));
+            // Hide all contents
+            Object.values(groupContents).forEach(c => c.classList.add('hidden'));
+            
+            // Activate current
+            clickedBtn.classList.add('active');
+            contentToShow.classList.remove('hidden');
+        }
 
-        // Tab switching
-        document.getElementById('show-login-tab').onclick = () => {
-            elements.userPanel.contents.login.classList.remove('hidden');
-            elements.userPanel.contents.register.classList.add('hidden');
-        };
-        document.getElementById('show-register-tab').onclick = () => {
-            elements.userPanel.contents.login.classList.add('hidden');
-            elements.userPanel.contents.register.classList.remove('hidden');
-        };
-        document.getElementById('show-info-tab').onclick = () => {
-            elements.userPanel.contents.info.classList.remove('hidden');
-            elements.userPanel.contents.perms.classList.add('hidden');
-        };
-        document.getElementById('show-perms-tab').onclick = () => {
-            elements.userPanel.contents.info.classList.add('hidden');
-            elements.userPanel.contents.perms.classList.remove('hidden');
-        };
+        // Zakładki Profilu
+        const profileBtns = { info: elements.userPanel.tabs.infoBtn, perms: elements.userPanel.tabs.permsBtn };
+        const profileCont = { info: elements.userPanel.contents.info, perms: elements.userPanel.contents.perms };
 
-        // Open/Close Panel
-        elements.userPanel.button.onclick = () => elements.userPanel.view.classList.remove('hidden');
+        elements.userPanel.tabs.infoBtn.onclick = () => switchTab(elements.userPanel.tabs.infoBtn, elements.userPanel.contents.info, profileBtns, profileCont);
+        elements.userPanel.tabs.permsBtn.onclick = () => switchTab(elements.userPanel.tabs.permsBtn, elements.userPanel.contents.perms, profileBtns, profileCont);
+
+        // Zakładki Auth
+        const authBtns = { login: elements.userPanel.tabs.loginBtn, reg: elements.userPanel.tabs.registerBtn };
+        const authCont = { login: elements.userPanel.contents.login, reg: elements.userPanel.contents.register };
+
+        elements.userPanel.tabs.loginBtn.onclick = () => switchTab(elements.userPanel.tabs.loginBtn, elements.userPanel.contents.login, authBtns, authCont);
+        elements.userPanel.tabs.registerBtn.onclick = () => switchTab(elements.userPanel.tabs.registerBtn, elements.userPanel.contents.register, authBtns, authCont);
+
+
+        // --- PANEL OTWIERANIE/ZAMYKANIE ---
+        elements.userPanel.button.onclick = () => {
+            updateUserInfoFields(); // ODŚWIEŻ DANE PRZY OTWARCIU!
+            elements.userPanel.view.classList.remove('hidden');
+        };
         elements.userPanel.closePanelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
         elements.userPanel.authCancelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
         elements.userPanel.logoutBtn.onclick = () => { auth.signOut(); elements.userPanel.view.classList.add('hidden'); };
 
-        // Editors
-        elements.fabEdit.onclick = () => openEditor(state.currentArticle);
-        elements.userPanel.addNewArticleBtn.onclick = () => openEditor(null);
-        elements.editorForm.cancelButton.onclick = () => {
-             elements.views.editor.classList.add('hidden');
-             if(state.currentArticle) elements.views.article.classList.remove('hidden');
-             else elements.views.main.classList.remove('hidden');
-        };
-        elements.editorForm.form.onsubmit = saveArticle;
-        
-        // Admin
-        elements.userPanel.adminAssignBtn.onclick = assignRole;
-        elements.userPanel.roleSaveBtn.onclick = () => {
-            const name = elements.userPanel.roleEditorName.value.trim().toLowerCase();
-            if(!name) return;
-            database.ref(`roles_config/${name}`).set({
-                can_write_articles: elements.userPanel.rolePermWrite.checked,
-                can_delete_comments: elements.userPanel.rolePermDelete.checked,
-                can_manage_roles: elements.userPanel.rolePermManage.checked
-            }).then(() => alert("Ranga zapisana!"));
+        // --- ZAPIS PROFILU ---
+        elements.userPanel.profileInfoForm.onsubmit = (e) => {
+            e.preventDefault();
+            const newNick = elements.userPanel.profileNickInput.value.trim();
+            const newColor = elements.userPanel.profileColorInput.value;
+            const oldNick = state.currentUser.nick;
+
+            const updates = {};
+            updates[`users/${state.currentUser.uid}/nick`] = newNick;
+            updates[`users/${state.currentUser.uid}/color`] = newColor;
+            
+            if(newNick.toLowerCase() !== oldNick.toLowerCase()) {
+                updates[`takenNicks/${oldNick.toLowerCase()}`] = null;
+                updates[`takenNicks/${newNick.toLowerCase()}`] = state.currentUser.uid;
+            }
+
+            database.ref().update(updates).then(() => {
+                alert("Zapisano!");
+                // Aktualizuj stan lokalny natychmiast
+                state.currentUser.nick = newNick;
+                state.currentUser.color = newColor;
+                updateUserInfoFields();
+            }).catch(e => alert(e.message));
         };
 
-        // Articles & Navigation
+
+        // --- ARTYKUŁY I NAWIGACJA ---
+        elements.loadMoreArticlesBtn.onclick = loadMoreArticles;
         elements.backButton.onclick = showMainView;
         document.body.addEventListener('click', e => {
             const card = e.target.closest('.article-card, .slide');
             if(card) displayArticle(card.dataset.id);
         });
 
-        // Auth
+        // --- AUTH ---
         elements.userPanel.loginEmail.closest('form').onsubmit = e => {
             e.preventDefault();
             auth.signInWithEmailAndPassword(elements.userPanel.loginEmail.value, elements.userPanel.loginPassword.value)
@@ -394,10 +509,89 @@ document.addEventListener('DOMContentLoaded', () => {
                     }).catch(e => alert(e.message));
             });
         };
+        
+        // --- ADMIN / EDITOR ---
+        elements.userPanel.adminAssignBtn.onclick = assignRole;
+        elements.userPanel.roleSaveBtn.onclick = () => {
+            const name = elements.userPanel.roleEditorName.value.trim().toLowerCase();
+            if(!name) return;
+            database.ref(`roles_config/${name}`).set({
+                can_write_articles: elements.userPanel.rolePermWrite.checked,
+                can_delete_comments: elements.userPanel.rolePermDelete.checked,
+                can_manage_roles: elements.userPanel.rolePermManage.checked
+            }).then(() => alert("Ranga zapisana!"));
+        };
+
+        if(elements.fabEdit) elements.fabEdit.onclick = () => openEditor(state.currentArticle);
+        elements.userPanel.addNewArticleBtn.onclick = () => openEditor(null);
+        elements.editorForm.cancelButton.onclick = () => {
+             elements.views.editor.classList.add('hidden');
+             if(state.currentArticle) elements.views.article.classList.remove('hidden');
+             else elements.views.main.classList.remove('hidden');
+        };
+        elements.editorForm.form.onsubmit = saveArticle;
+        
+        // Komentarze
+        elements.commentSection.form.onsubmit = (e) => {
+            e.preventDefault();
+            const msg = elements.commentSection.messageInput.value.trim();
+            const author = state.currentUser ? state.currentUser.nick : elements.commentSection.nameInput.value;
+            if(!msg || !author) return;
+            
+            const userId = state.currentUser ? state.currentUser.uid : state.localUserId;
+            const color = state.currentUser ? (state.currentUser.color || '#fff') : '#fff';
+            
+            // Proste dodawanie bez sprawdzania unikalności gościa (bo gość nie ma konta)
+            // Ale dla pewności - check nick dla gości
+            if(!state.currentUser) {
+                 database.ref(`takenNicks/${author.toLowerCase()}`).once('value', s=> {
+                     if(s.exists()) alert("Ten nick jest zarejestrowany. Zaloguj się!");
+                     else pushComment();
+                 });
+            } else {
+                 pushComment();
+            }
+
+            function pushComment() {
+                database.ref(`comments/${state.currentArticle.id}`).push().set({
+                    author: author, message: msg, userId: userId, userColor: color, timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                elements.commentSection.messageInput.value = '';
+            }
+        };
     }
 
-    // Pozostałe funkcje (Comments, Slider) bez większych zmian, tylko skrócone dla czytelności tutaj...
-    function listenForComments(id) {
+    // === FUNKCJE POMOCNICZE WIDOKU ===
+    function showMainView() {
+        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
+        elements.views.main.classList.remove('hidden');
+        elements.backButton.classList.add('hidden');
+        state.currentArticle = null;
+        updateUIForPermissions();
+    }
+
+    async function displayArticle(id) {
+        let meta = state.allArticlesMeta.find(a => a.id == id);
+        if(!meta) {
+             try { const s = await database.ref(`articles_meta/${id}`).once('value'); meta = s.val(); } catch(e){}
+        }
+        if(!meta) return showMainView();
+        
+        state.currentArticle = meta;
+        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
+        elements.views.article.classList.remove('hidden');
+        elements.backButton.classList.remove('hidden');
+        updateUIForPermissions();
+
+        elements.articleDetail.date.textContent = meta.date;
+        elements.articleDetail.author.textContent = meta.author;
+        elements.articleDetail.content.innerHTML = "Ładowanie...";
+        
+        database.ref(`articles_content/${id}`).once('value', s => {
+            const c = s.val() ? s.val().content : '';
+            elements.articleDetail.content.innerHTML = c;
+        });
+        
         if(state.activeCommentsRef) state.activeCommentsRef.off();
         state.activeCommentsRef = database.ref(`comments/${id}`);
         state.activeCommentsRef.on('value', s => {
@@ -413,34 +607,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         bindEvents();
         loadRolesConfig();
+        loadInitialArticles(); // To ładuje slider i listę
+        
         auth.onAuthStateChanged(async u => {
             state.currentUser = null;
             if(u) {
                 const s = await database.ref(`users/${u.uid}`).once('value');
                 state.currentUser = { uid: u.uid, ...s.val() };
             }
-            // Ważne: Nawet jeśli w bazie nie ma roli, UI pokaże "user", ale uprawnienia będą false
-            if(state.currentUser) {
-                elements.userPanel.nickSpan.textContent = state.currentUser.nick;
-                elements.userPanel.userRoleBadge.textContent = state.currentUser.role || 'USER';
-                elements.userPanel.infoView.classList.remove('hidden');
-                elements.userPanel.authView.classList.add('hidden');
-            } else {
-                elements.userPanel.infoView.classList.add('hidden');
-                elements.userPanel.authView.classList.remove('hidden');
-            }
+            updateUserInfoFields();
             calculatePermissions();
-        });
-        
-        // Ładowanie artykułów
-        database.ref('articles_meta').orderByChild('order').limitToFirst(ARTICLES_PER_PAGE).once('value', s => {
-            const d = s.val();
-            if(d) {
-                state.allArticlesMeta = Object.values(d).sort((a,b)=>a.order-b.order);
-                elements.newsList.innerHTML = state.allArticlesMeta.map(a => 
-                    `<div class="article-card" data-id="${a.id}"><img src="${a.thumbnail}"><h4>${a.title}</h4></div>`
-                ).join('');
-            }
         });
     }
 
