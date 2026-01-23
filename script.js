@@ -1,6 +1,7 @@
 /**
  * Główny skrypt aplikacji Sekstar News.
  * Wersja z Systemem Uprawnień (RBAC), Kolorowymi Nickami i Pływającym Edytorem.
+ * POPRAWIONA: Zawiera inicjalizację ról i naprawę widoku gościa.
  */
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -17,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
         messagingSenderId: "610657374509",
         appId: "1:610657374509:web:1c90f0ba2ab8e0927183a4"
     };
-    const SUPER_ADMIN_UID = 'bNBvAM1hJef0k8YmQ7UlXscYiny2'; 
 
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
@@ -27,8 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const ARTICLES_PER_PAGE = 5;
     const COMMENTS_PER_PAGE = 5;
 
-    // Hardcoded Admin UID (Zapasowy dostęp w razie błędu konfiguracji ról)
-    const SUPER_ADMIN_UID = '9T148rWC4lOnwBKTtPg9B24Ns1F3'; 
+    // --- KONFIGURACJA SUPER ADMINA ---
+    // Tu wpisz swoje UID (znajdziesz je w Firebase Console -> Authentication)
+    // Dzięki temu będziesz miał dostęp do panelu rang nawet jak baza jest pusta.
+    const SUPER_ADMIN_UID = 'L6GXbvAZw9aJ7uPCJRcD5brocl83'; 
 
     // =================================================================
     // === 2. ELEMENTY DOM =============================================
@@ -73,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // Edytor (FAB i Formularz)
-        fabEdit: document.getElementById('fab-edit-article'),
+        fabEdit: document.getElementById('fab-edit-article'), // Upewnij się, że masz ten element w HTML!
         editorForm: { 
             form: document.getElementById('editor-form'), 
             idInput: document.getElementById('editor-id'), 
@@ -170,6 +172,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 4. SYSTEM UPRAWNIEŃ (RBAC) ==================================
     // =================================================================
 
+    // Funkcja tworząca domyślne role, jeśli baza jest pusta (Naprawa problemu "Jajko czy Kura")
+    function initializeDefaultRoles() {
+        database.ref('roles_config').once('value', snapshot => {
+            if (!snapshot.exists()) {
+                console.log("Tworzenie domyślnych ról...");
+                const defaultRoles = {
+                    admin: {
+                        can_write_articles: true,
+                        can_delete_comments: true,
+                        can_manage_roles: true
+                    },
+                    user: {
+                        can_write_articles: false,
+                        can_delete_comments: false,
+                        can_manage_roles: false
+                    }
+                };
+                database.ref('roles_config').set(defaultRoles);
+            }
+        });
+    }
+
     /**
      * Pobiera definicje ról z bazy danych.
      */
@@ -197,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (state.currentUser) {
-            // Super Admin Bypass
+            // Super Admin Bypass (Dostęp z kodu, niezależnie od bazy)
             if (state.currentUser.uid === SUPER_ADMIN_UID) {
                 state.permissions = {
                     can_write_articles: true,
@@ -238,10 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewToShow) viewToShow.classList.remove('hidden');
         
         // FAB (Ołówek) pokazuje się tylko w widoku artykułu I jeśli ma się uprawnienia
-        if (viewToShow === elements.views.article && hasPermission('can_write_articles')) {
-            elements.fabEdit.classList.remove('hidden');
-        } else {
-            elements.fabEdit.classList.add('hidden');
+        // Sprawdzamy czy element istnieje, bo w HTML mógł nie zostać dodany
+        if (elements.fabEdit) {
+            if (viewToShow === elements.views.article && hasPermission('can_write_articles')) {
+                elements.fabEdit.classList.remove('hidden');
+            } else {
+                elements.fabEdit.classList.add('hidden');
+            }
         }
     }
 
@@ -548,29 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 8. ZARZĄDZANIE UŻYTKOWNIKAMI I ROLAMI =======================
     // =================================================================
 
-    // Funkcja tworząca domyślne role, jeśli baza jest pusta
-    function initializeDefaultRoles() {
-        database.ref('roles_config').once('value', snapshot => {
-            if (!snapshot.exists()) {
-                console.log("Inicjalizacja domyślnych ról...");
-                const defaultRoles = {
-                    admin: {
-                        can_write_articles: true,
-                        can_delete_comments: true,
-                        can_manage_roles: true
-                    },
-                    user: {
-                        can_write_articles: false,
-                        can_delete_comments: false,
-                        can_manage_roles: false
-                    }
-                };
-                database.ref('roles_config').set(defaultRoles);
-            }
-        });
-    }
-
-function updateUserUI() {
+    function updateUserUI() {
         if (state.currentUser) {
             // === ZALOGOWANY ===
             elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
@@ -584,7 +589,6 @@ function updateUserUI() {
             if (state.currentUser.role === 'admin') elements.userPanel.userRoleBadge.style.color = 'red';
             else elements.userPanel.userRoleBadge.style.color = '#ffdd4b';
             
-            // Przełączanie widoków wewnątrz panelu
             elements.userPanel.infoView.classList.remove('hidden');
             elements.userPanel.authView.classList.add('hidden');
 
@@ -595,18 +599,17 @@ function updateUserUI() {
 
             // Komentarze
             elements.commentSection.nameInput.value = state.currentUser.nick;
-            // elements.commentSection.nameInput.disabled = true; // Opcjonalnie: zablokuj zmianę nicku w komentarzu
+            elements.commentSection.nameInput.disabled = false; 
 
         } else {
             // === NIEZALOGOWANY (GOŚĆ) ===
             elements.userPanel.button.textContent = '?';
             elements.userPanel.button.style.backgroundColor = '#4a68a5';
             
-            // Ukrywamy panel info, pokazujemy logowanie
             elements.userPanel.infoView.classList.add('hidden');
             elements.userPanel.authView.classList.remove('hidden');
             
-            // Domyślnie pokaż zakładkę logowania
+            // Domyślny widok logowania
             elements.userPanel.loginForm.classList.remove('hidden');
             elements.userPanel.registerForm.classList.add('hidden');
             elements.userPanel.showLoginTab.classList.add('active');
@@ -629,10 +632,12 @@ function updateUserUI() {
 
         // Pokaż/ukryj przycisk dodawania artykułu w panelu (jako opcja zapasowa)
         // Oraz pokaż/ukryj FAB w widoku artykułu
-        if (elements.views.article.classList.contains('hidden') === false && hasPermission('can_write_articles')) {
-             elements.fabEdit.classList.remove('hidden');
-        } else {
-             elements.fabEdit.classList.add('hidden');
+        if (elements.fabEdit) {
+            if (elements.views.article.classList.contains('hidden') === false && hasPermission('can_write_articles')) {
+                elements.fabEdit.classList.remove('hidden');
+            } else {
+                elements.fabEdit.classList.add('hidden');
+            }
         }
     }
 
@@ -717,10 +722,9 @@ function updateUserUI() {
     // === 9. INICJALIZACJA I OBSŁUGA ZDARZEŃ ==========================
     // =================================================================
 
-function initializeAuth() {
+    function initializeAuth() {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // Pobieramy dane użytkownika
                 const userRef = database.ref(`users/${user.uid}`);
                 const snap = await userRef.once('value');
                 const profile = snap.val() || {};
@@ -730,27 +734,16 @@ function initializeAuth() {
                     email: user.email,
                     nick: profile.nick || 'Użytkownik',
                     color: profile.color || '#ffffff',
-                    role: profile.role || 'user' // Domyślnie user, jeśli brak w bazie
+                    role: profile.role || 'user'
                 };
             } else {
                 state.currentUser = null;
             }
             
-            calculatePermissions(); // Przelicz uprawnienia (ważne dla Super Admina)
-            updateUserUI();       // Odśwież widok
+            calculatePermissions();
+            updateUserUI();
         });
     }
-
-    function init() {
-        state.localUserId = getOrCreateLocalUserId();
-        bindEventListeners();
-        initializeAuth();
-        loadInitialArticles();
-        initializeDefaultRoles(); // <--- DODAJ TO, ABY STWORZYĆ ROLE W BAZIE
-    }
-    
-    // Na samym dole pliku wywołanie:
-    init();
 
     function loadInitialArticles() {
         // Podstawowa konfiguracja ról
@@ -864,9 +857,11 @@ function initializeAuth() {
 
     function bindEventListeners() {
         // FAB - Edycja Artykułu
-        elements.fabEdit.addEventListener('click', () => {
-            openEditor(state.currentArticle);
-        });
+        if (elements.fabEdit) {
+            elements.fabEdit.addEventListener('click', () => {
+                openEditor(state.currentArticle);
+            });
+        }
 
         // Nawigacja
         document.body.addEventListener('click', (event) => {
@@ -1025,10 +1020,17 @@ function initializeAuth() {
         });
     }
 
-    // Start
-    state.localUserId = getOrCreateLocalUserId();
-    bindEventListeners();
-    initializeAuth();
-    loadInitialArticles();
+    // =================================================================
+    // === 10. START ===================================================
+    // =================================================================
+    
+    function init() {
+        state.localUserId = getOrCreateLocalUserId();
+        bindEventListeners();
+        initializeAuth();
+        loadInitialArticles();
+        initializeDefaultRoles(); // Tworzy role jeśli baza pusta
+    }
+    
+    init();
 });
-
