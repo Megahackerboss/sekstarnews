@@ -106,13 +106,14 @@
 
                     <!-- Zakładka Uprawnienia (Admin) -->
                     <div id="profile-perms-content" class="hidden">
-                        <h4>Zarządzanie Użytkownikami</h4>
-                        <div class="admin-panel-section">
-                            <label>Zmień rangę użytkownika (wpisz email):</label>
-                            <input type="email" id="admin-user-email" placeholder="Email użytkownika">
-                            <select id="admin-role-select"></select>
-                            <button id="admin-assign-role-btn">Nadaj Rangę</button>
-                        </div>
+                    <h4>Zarządzanie Użytkownikami</h4>
+                    <div class="admin-panel-section">
+    <!-- ZMIANA: Od razu wpisujemy właściwy tekst -->
+                      <label for="admin-user-email">Zmień rangę użytkownika (wpisz NICK):</label>
+                      <input type="text" id="admin-user-email" placeholder="Wpisz dokładny nick użytkownika">
+                      <select id="admin-role-select"></select>
+                      <button id="admin-assign-role-btn">Nadaj Rangę</button>
+                    </div>
                         <hr style="border-color: #4a68a5; margin: 20px 0;">
                         <h4>Edytor Rang</h4>
                         <div class="admin-panel-section">
