@@ -1,11 +1,10 @@
-// Używamy 'load' zamiast 'DOMContentLoaded', aby upewnić się, że Firebase CDN się załadował
+// Używamy 'load' aby upewnić się, że Firebase CDN się załadował na wszystkich przeglądarkach
 window.addEventListener('load', () => {
 
     // =================================================================
     // === 1. KONFIGURACJA =============================================
     // =================================================================
     
-    // Zabezpieczenie: Sprawdzamy czy Firebase się załadował
     if (typeof firebase === 'undefined') {
         console.error("Firebase nie został załadowany! Sprawdź połączenie z internetem lub blokery reklam.");
         alert("Błąd ładowania systemu. Odśwież stronę.");
@@ -26,7 +25,6 @@ window.addEventListener('load', () => {
     const database = firebase.database();
     const auth = firebase.auth();
     const ARTICLES_PER_PAGE = 5;
-    const COMMENTS_PER_PAGE = 5;
 
     // =================================================================
     // === 2. ELEMENTY DOM =============================================
@@ -102,7 +100,6 @@ window.addEventListener('load', () => {
                 register: document.getElementById('register-form')
             },
 
-            // Admin Panel
             adminNickInput: document.getElementById('admin-user-email'), 
             adminRoleSelect: document.getElementById('admin-role-select'),
             adminAssignBtn: document.getElementById('admin-assign-role-btn'),
@@ -112,7 +109,6 @@ window.addEventListener('load', () => {
             rolePermManage: document.getElementById('perm-manage-roles'),
             roleSaveBtn: document.getElementById('admin-save-role-btn'),
             
-            // Auth inputs
             loginEmail: document.getElementById('login-email'),
             loginPassword: document.getElementById('login-password'),
             registerNick: document.getElementById('register-nick'),
@@ -133,7 +129,6 @@ window.addEventListener('load', () => {
     elements.userPanel.addNewArticleBtn.style.marginTop = "10px";
     elements.userPanel.addNewArticleBtn.className = "hidden";
     
-    // Zabezpieczenie przed brakiem elementu w HTML
     if(document.querySelector('#profile-perms-content')) {
         document.querySelector('#profile-perms-content').prepend(elements.userPanel.addNewArticleBtn);
     }
@@ -141,8 +136,6 @@ window.addEventListener('load', () => {
     // =================================================================
     // === 3. STAN APLIKACJI ===========================================
     // =================================================================
-    
-    // Bezpieczne pobieranie localStorage (fix dla trybu incognito/restrykcyjnych przeglądarek)
     let localUserId;
     try {
         localUserId = localStorage.getItem('localUserId');
@@ -151,7 +144,7 @@ window.addEventListener('load', () => {
             localStorage.setItem('localUserId', localUserId);
         }
     } catch (e) {
-        console.warn("Brak dostępu do localStorage, używam tymczasowego ID sesji.");
+        console.warn("Brak dostępu do localStorage.");
         localUserId = `guest_temp_${Math.random().toString(36).substr(2, 9)}`;
     }
 
@@ -436,10 +429,26 @@ window.addEventListener('load', () => {
     }
 
     // =================================================================
-    // === 8. EVENTY I ŁADOWANIE =======================================
+    // === 8. DEEP LINKING (OBSŁUGA LINKÓW) ============================
+    // =================================================================
+    function handleDeepLink() {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#article-')) {
+            const articleId = hash.substring(9);
+            displayArticle(articleId);
+        } else {
+            showMainView();
+        }
+    }
+
+    // =================================================================
+    // === 9. EVENTY I ŁADOWANIE =======================================
     // =================================================================
     function bindEvents() {
-        // --- UDOSTĘPNIANIE (NAPRAWIONE) ---
+        // Obserwuj zmiany URL
+        window.addEventListener('hashchange', handleDeepLink);
+
+        // Share Button
         elements.articleDetail.shareButton.onclick = async () => {
             if (!state.currentArticle) return;
             const url = `${window.location.origin}${window.location.pathname}#article-${state.currentArticle.id}`;
@@ -457,14 +466,14 @@ window.addEventListener('load', () => {
             } catch (err) {
                 try {
                     await navigator.clipboard.writeText(url);
-                    alert("Link skopiowany do schowka!");
+                    alert("Link skopiowany do schowka: " + url);
                 } catch (e) {
                     prompt("Skopiuj link:", url);
                 }
             }
         };
 
-        // --- ZAKŁADKI ---
+        // Tabs
         function switchTab(clickedBtn, contentToShow, groupBtns, groupContents) {
             Object.values(groupBtns).forEach(b => b.classList.remove('active'));
             Object.values(groupContents).forEach(c => c.classList.add('hidden'));
@@ -481,7 +490,7 @@ window.addEventListener('load', () => {
         elements.userPanel.tabs.loginBtn.onclick = () => switchTab(elements.userPanel.tabs.loginBtn, elements.userPanel.contents.login, authBtns, authCont);
         elements.userPanel.tabs.registerBtn.onclick = () => switchTab(elements.userPanel.tabs.registerBtn, elements.userPanel.contents.register, authBtns, authCont);
 
-        // --- PANEL ---
+        // Panel
         elements.userPanel.button.onclick = () => {
             updateUserInfoFields(); 
             elements.userPanel.view.classList.remove('hidden');
@@ -490,7 +499,7 @@ window.addEventListener('load', () => {
         elements.userPanel.authCancelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
         elements.userPanel.logoutBtn.onclick = () => { auth.signOut(); elements.userPanel.view.classList.add('hidden'); };
 
-        // --- ZAPIS PROFILU ---
+        // Zapis profilu
         elements.userPanel.profileInfoForm.onsubmit = (e) => {
             e.preventDefault();
             const newNick = elements.userPanel.profileNickInput.value.trim();
@@ -514,18 +523,21 @@ window.addEventListener('load', () => {
             }).catch(e => alert(e.message));
         };
 
-        // --- NAWIGACJA ARTYKUŁÓW ---
+        // Nawigacja
         elements.loadMoreArticlesBtn.onclick = loadMoreArticles;
-        elements.backButton.onclick = showMainView;
+        // PRZYCISK WSTECZ TERAZ TYLKO CZYŚCI URL, resztę robi hashchange
+        elements.backButton.onclick = () => {
+            window.location.hash = '';
+        };
+
         document.body.addEventListener('click', e => {
             const card = e.target.closest('.article-card, .slide');
-            // Ignorujemy kliknięcie, jeśli trafiono w kropkę nawigacji
             if(card && !e.target.classList.contains('nav-dot')) { 
-                displayArticle(card.dataset.id);
+                window.location.hash = `article-${card.dataset.id}`;
             }
         });
 
-        // --- AUTH ---
+        // Auth
         elements.userPanel.loginEmail.closest('form').onsubmit = e => {
             e.preventDefault();
             auth.signInWithEmailAndPassword(elements.userPanel.loginEmail.value, elements.userPanel.loginPassword.value)
@@ -549,7 +561,7 @@ window.addEventListener('load', () => {
             });
         };
         
-        // --- ADMIN ---
+        // Admin
         elements.userPanel.adminAssignBtn.onclick = assignRole;
         elements.userPanel.roleSaveBtn.onclick = () => {
             const name = elements.userPanel.roleEditorName.value.trim().toLowerCase();
@@ -570,7 +582,7 @@ window.addEventListener('load', () => {
         };
         elements.editorForm.form.onsubmit = saveArticle;
         
-        // --- KOMENTARZE ---
+        // Komentarze
         elements.commentSection.form.onsubmit = (e) => {
             e.preventDefault();
             const msg = elements.commentSection.messageInput.value.trim();
@@ -597,7 +609,6 @@ window.addEventListener('load', () => {
             }
         };
 
-        // Usuwanie komentarzy
         elements.commentSection.list.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-comment-btn')) {
                 const commentEl = e.target.closest('.comment');
@@ -608,7 +619,7 @@ window.addEventListener('load', () => {
             }
         });
         
-        // Polubienia
+        // Likes
         if (elements.articleDetail.likeButton) {
             elements.articleDetail.likeButton.onclick = () => {
                 if(!state.currentArticle) return;
@@ -648,7 +659,7 @@ window.addEventListener('load', () => {
         elements.articleDetail.author.textContent = meta.author;
         elements.articleDetail.content.innerHTML = "Ładowanie...";
         
-        // Likes listener
+        // Likes
         database.ref(`articles/${id}/likes`).on('value', s => {
             elements.articleDetail.likeCount.textContent = s.val() || 0;
             try {
@@ -719,6 +730,9 @@ window.addEventListener('load', () => {
             updateUserInfoFields();
             calculatePermissions();
         });
+
+        // Obsługa Deep Link po załadowaniu
+        handleDeepLink();
     }
 
     init();
