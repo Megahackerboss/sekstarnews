@@ -543,6 +543,57 @@ input[type="color"] {
     /* Domyślny kolor jest nadpisywany przez inline-style z JS */
 }
 
+/* --- LANGUAGE SWITCHER --- */
+.lang-switcher {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    z-index: 200;
+}
+
+.current-lang {
+    cursor: pointer;
+    border: 2px solid #4a68a5;
+    border-radius: 4px;
+    padding: 2px 5px;
+    background-color: #1f3a61;
+}
+
+.lang-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: #1f3a61;
+    border: 1px solid #4a68a5;
+    border-radius: 4px;
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    width: 100px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.lang-dropdown.hidden {
+    display: none;
+}
+
+.lang-option {
+    padding: 8px 10px;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.lang-option:hover {
+    background-color: #3a5a8f;
+}
+
+.lang-option img {
+    width: 20px;
+}
 
 
 
