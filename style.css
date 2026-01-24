@@ -372,8 +372,8 @@ body {
 /* Zastąp stary styl lub dodaj ten */
 #user-panel-button {
     position: fixed;
-    top: 15px;
-    right: 20px;
+    top: 10px;      /* Taka sama wysokość jak środek navbara */
+    right: 15px;    /* Przy samej krawędzi */
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -383,12 +383,12 @@ body {
     font-size: 20px;
     font-weight: bold;
     cursor: pointer;
-    z-index: 101;
-    /* ZMIANA: Używamy Flexbox zamiast line-height */
+    /* Bardzo wysoki Z-Index, żeby był nad navbarem i flagami */
+    z-index: 3000; 
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0; /* Ważne dla Chromium */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 
 /* Style dla nowego widoku profilu w panelu użytkownika */
@@ -544,9 +544,12 @@ input[type="color"] {
 /* --- LANGUAGE SWITCHER --- */
 .lang-switcher {
     position: absolute;
-    top: 15px;
-    right: 20px;
-    z-index: 200;
+    /* Zmieniamy z 20px na 80px, żeby nie nachodziło na przycisk profilu */
+    right: 80px; 
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2000;
+    cursor: pointer;
 }
 
 .current-lang {
@@ -651,6 +654,7 @@ input[type="color"] {
 .lang-option:hover {
     background-color: #3a5a8f;
 }
+
 
 
 
