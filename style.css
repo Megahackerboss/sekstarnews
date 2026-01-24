@@ -370,10 +370,8 @@ body {
 
 /* Zastąp stary styl lub dodaj ten */
 #user-panel-button {
-    position: absolute; /* Zmieniamy z fixed na absolute, żeby trzymał się paska */
-    top: 50%;
-    transform: translateY(-50%);
-    right: 20px; /* Margines od prawej krawędzi */
+    /* Usuwamy position: fixed/absolute! */
+    position: relative; 
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -383,12 +381,15 @@ body {
     font-size: 20px;
     font-weight: bold;
     cursor: pointer;
-    z-index: 3000; 
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    padding: 0; /* Reset paddingu */
+    padding: 0;
+    margin: 0;
+    top: auto;
+    right: auto;
+    transform: none;
 }
 
 /* Style dla nowego widoku profilu w panelu użytkownika */
@@ -543,13 +544,9 @@ input[type="color"] {
 
 /* --- LANGUAGE SWITCHER --- */
 .lang-switcher {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    /* Obliczenie: 20px (margines prawy) + 40px (szerokość przycisku) + 15px (odstęp) */
-    right: 75px; 
-    z-index: 2000;
+    position: relative; /* Ważne dla dropdownu */
     cursor: pointer;
+    /* Usuwamy stare right/top/transform, bo .nav-actions o to dba */
 }
 
 .current-lang {
@@ -562,16 +559,16 @@ input[type="color"] {
 
 .lang-dropdown {
     position: absolute;
-    top: 100%;
-    right: 0;
+    top: 45px;
+    right: 0; /* Wyrównaj do prawej krawędzi flagi */
     background-color: #1f3a61;
     border: 1px solid #4a68a5;
-    border-radius: 4px;
-    margin-top: 5px;
+    border-radius: 5px;
+    width: 120px;
+    padding: 5px 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
-    width: 100px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
 .lang-dropdown.hidden {
@@ -655,6 +652,16 @@ input[type="color"] {
     background-color: #3a5a8f;
 }
 
+.nav-actions {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%); /* Idealnie na środku w pionie */
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Odstęp między flagą a profilem */
+    z-index: 2000;
+}
 
 
 
