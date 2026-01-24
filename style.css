@@ -305,7 +305,8 @@ body {
     gap: 15px;
 }
 .editor-full-width {
-    grid-column: span 2;
+    display: flex;
+    flex-direction: column;
 }
 #editor-form label { margin-top: 15px; font-weight: bold; }
 #editor-form input, #editor-form textarea { padding: 10px; font-size: 16px; margin-top: 5px; background-color: #333; color: #fff; border: 1px solid #555; }
@@ -731,6 +732,16 @@ input[type="color"] {
         font-size: 16px;
         padding: 10px;
     }
+}
+/* --- Fix dla TinyMCE w modalu --- */
+.tox-tinymce {
+    border: 1px solid #4a68a5 !important;
+    border-radius: 4px;
+}
+
+/* Upewniamy się, że okna dialogowe edytora są na wierzchu */
+.tox-dialog-wrap, .tox-dialog {
+    z-index: 10000 !important;
 }
 
 
