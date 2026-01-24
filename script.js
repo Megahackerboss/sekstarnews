@@ -297,13 +297,48 @@ window.addEventListener('load', () => {
 
         // Edytor
         elements.editorForm.form.onsubmit = e => { e.preventDefault(); /* saveArticle */ saveArticle(e); };
-        function saveArticle(e) {
-             const id = elements.editorForm.idInput.value;
-             const meta = { id: parseInt(id), order: parseInt(elements.editorForm.orderInput.value), date: elements.editorForm.dateInput.value, title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value, featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: Date.now() };
-             const content = { content: elements.editorForm.contentInput.value };
-             const updates = {}; updates[`/articles_meta/${id}`] = meta; updates[`/articles_content/${id}`] = content;
-             database.ref().update(updates).then(() => { alert(i18next.t('editor.save_success')); const idx = state.allArticlesMeta.findIndex(a => a.id == id); if(idx > -1) state.allArticlesMeta[idx] = meta; else state.allArticlesMeta.push(meta); state.allArticlesMeta.sort((a,b) => a.order - b.order); if(state.currentArticle && state.currentArticle.id == id) displayArticle(id); else { showMainView(); displayNewsList(state.allArticlesMeta); } }).catch(e => alert(e.message));
+function saveArticle(e) {
+        e.preventDefault();
+        const id = elements.editorForm.idInput.value;
+        const meta = {
+            id: parseInt(id),
+            order: parseInt(elements.editorForm.orderInput.value),
+            date: elements.editorForm.dateInput.value,
+            title: elements.editorForm.titleInput.value,
+            author: elements.editorForm.authorInput.value,
+            thumbnail: elements.editorForm.thumbnailInput.value,
+            featured: elements.editorForm.featuredCheckbox.checked,
+            lastUpdated: Date.now()
+        };
+        
+        // KLUCZOWA ZMIANA: Pobieramy treść z TinyMCE zamiast z textarea
+        let contentHtml = '';
+        if (tinymce.get('editor-content')) {
+            contentHtml = tinymce.get('editor-content').getContent();
+        } else {
+            contentHtml = elements.editorForm.contentInput.value;
         }
+
+        const content = { content: contentHtml };
+        
+        const updates = {};
+        updates[`/articles_meta/${id}`] = meta;
+        updates[`/articles_content/${id}`] = content;
+
+        database.ref().update(updates).then(() => {
+            alert(i18next.t('editor.save_success') || "Zapisano!");
+            const idx = state.allArticlesMeta.findIndex(a => a.id == id);
+            if(idx > -1) state.allArticlesMeta[idx] = meta;
+            else state.allArticlesMeta.push(meta);
+            state.allArticlesMeta.sort((a,b) => a.order - b.order);
+            
+            if(state.currentArticle && state.currentArticle.id == id) displayArticle(id);
+            else {
+                 showMainView();
+                 displayNewsList(state.allArticlesMeta);
+            }
+        }).catch(e => alert("Error: " + e.message));
+    }
         elements.editorForm.cancelButton.onclick = () => { elements.views.editor.classList.add('hidden'); if(state.currentArticle) elements.views.article.classList.remove('hidden'); else elements.views.main.classList.remove('hidden'); };
         elements.editorForm.deleteButton.onclick = () => {
             const id = elements.editorForm.idInput.value;
@@ -315,10 +350,51 @@ window.addEventListener('load', () => {
         };
         if(elements.fabEdit) elements.fabEdit.onclick = () => openEditor(state.currentArticle);
         elements.userPanel.addNewArticleBtn.onclick = () => openEditor(null);
-        function openEditor(article){ if (!hasPermission('can_write_articles')) return alert(i18next.t('editor.error_permission')); elements.userPanel.view.classList.add('hidden'); elements.editorForm.form.reset();
-            if (article) { elements.editorForm.idInput.value = article.id; elements.editorForm.orderInput.value = article.order || 99; elements.editorForm.dateInput.value = article.date; elements.editorForm.titleInput.value = article.title; elements.editorForm.authorInput.value = article.author; elements.editorForm.thumbnailInput.value = article.thumbnail; elements.editorForm.featuredCheckbox.checked = article.featured; elements.editorForm.deleteButton.classList.remove('hidden'); database.ref(`articles_content/${article.id}`).once('value', s => elements.editorForm.contentInput.value = s.val() ? s.val().content : ''); } else { elements.editorForm.idInput.value = Date.now(); elements.editorForm.orderInput.value = 1; elements.editorForm.dateInput.value = new Date().toLocaleString('pl-PL'); elements.editorForm.authorInput.value = state.currentUser ? state.currentUser.nick : 'Admin'; elements.editorForm.deleteButton.classList.add('hidden'); }
-            Object.values(elements.views).forEach(v => v.classList.add('hidden')); elements.views.editor.classList.remove('hidden');
+function openEditor(article = null) {
+        if (!hasPermission('can_write_articles')) return alert(i18next.t('editor.error_permission') || "Brak uprawnień!");
+        
+        elements.userPanel.view.classList.add('hidden');
+        elements.editorForm.form.reset();
+        
+        // Zmienna na treść
+        let contentToSet = '';
+
+        if (article) {
+            elements.editorForm.idInput.value = article.id;
+            elements.editorForm.orderInput.value = article.order || 99;
+            elements.editorForm.dateInput.value = article.date;
+            elements.editorForm.titleInput.value = article.title;
+            elements.editorForm.authorInput.value = article.author;
+            elements.editorForm.thumbnailInput.value = article.thumbnail;
+            elements.editorForm.featuredCheckbox.checked = article.featured;
+            elements.editorForm.deleteButton.classList.remove('hidden');
+            
+            // Pobieramy treść z bazy
+            database.ref(`articles_content/${article.id}`).once('value', s => {
+                contentToSet = s.val() ? s.val().content : '';
+                // Ustawiamy treść w TinyMCE (jeśli jest gotowy)
+                if (tinymce.get('editor-content')) {
+                    tinymce.get('editor-content').setContent(contentToSet);
+                } else {
+                    elements.editorForm.contentInput.value = contentToSet;
+                }
+            });
+        } else {
+            elements.editorForm.idInput.value = Date.now();
+            elements.editorForm.orderInput.value = 1;
+            elements.editorForm.dateInput.value = new Date().toLocaleString('pl-PL');
+            elements.editorForm.authorInput.value = state.currentUser ? state.currentUser.nick : 'Admin';
+            elements.editorForm.deleteButton.classList.add('hidden');
+            
+            // Czyścimy edytor dla nowego artykułu
+            if (tinymce.get('editor-content')) {
+                tinymce.get('editor-content').setContent('');
+            }
         }
+        
+        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
+        elements.views.editor.classList.remove('hidden');
+    }
 
         // Share
         elements.articleDetail.shareButton.onclick = async () => { if (!state.currentArticle) return; const url = window.location.href; try { if (navigator.share) await navigator.share({title: state.currentArticle.title, url: url}); else throw new Error('no share'); } catch (e) { try { await navigator.clipboard.writeText(url); alert(i18next.t('article.link_copied')); } catch(err){ prompt("Copy:", url); } } };
@@ -363,9 +439,23 @@ window.addEventListener('load', () => {
         });
     }
 
+// === Inicjalizacja TinyMCE ===
+    function initEditor() {
+        tinymce.init({
+            selector: '#editor-content', // ID twojego textarea
+            height: 400,
+            menubar: false,
+            skin: 'oxide-dark',      // Ciemny motyw
+            content_css: 'dark',     // Ciemne tło w środku
+            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table code help wordcount',
+            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | code', // 'code' to przycisk źródła
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px; background-color: #1f3a61; color: white; }' // Dopasowanie kolorów do strony
+        });
+    }
+
     // === START ===
     function init() {
-        initI18n(); bindEvents(); loadRolesConfig(); loadInitialArticles();
+        initI18n(); bindEvents();initEditor();loadRolesConfig(); loadInitialArticles();
         auth.onAuthStateChanged(async u => {
             state.currentUser = null;
             if(u) { const s = await database.ref(`users/${u.uid}`).once('value'); state.currentUser = { uid: u.uid, ...s.val() }; }
@@ -375,3 +465,4 @@ window.addEventListener('load', () => {
     }
     init();
 });
+
