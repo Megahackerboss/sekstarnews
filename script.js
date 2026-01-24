@@ -492,7 +492,7 @@ window.addEventListener('load', () => {
         });
     }
 
-    function renderComments(data) {
+function renderComments(data) {
         elements.commentSection.list.innerHTML = '';
         if(!data) return;
 
@@ -505,13 +505,22 @@ window.addEventListener('load', () => {
             el.dataset.commentId = comment.id;
             el.style.borderLeft = `3px solid ${comment.userColor || '#fff'}`;
             
+            // Logika uprawnień
             const myId = state.currentUser ? state.currentUser.uid : state.localUserId;
             const isMyComment = comment.userId === myId;
             const canModerate = hasPermission('can_delete_comments');
             
-            let deleteBtn = '';
+            let controls = '';
+            // Edytować może tylko autor, usuwać autor lub moderator
             if (isMyComment || canModerate) {
-                deleteBtn = `<div class="comment-controls"><button class="delete-comment-btn">Usuń</button></div>`;
+                controls = `<div class="comment-controls">`;
+                
+                if (isMyComment) {
+                     controls += `<button class="edit-comment-btn" data-i18n="article.edit_comment">Edytuj</button>`;
+                }
+                
+                controls += `<button class="delete-comment-btn" data-i18n="article.delete_comment">Usuń</button>`;
+                controls += `</div>`;
             }
 
             el.innerHTML = `
@@ -519,13 +528,15 @@ window.addEventListener('load', () => {
                     <span style="color:${comment.userColor || '#fff'}">${comment.author}</span>
                     <span class="comment-date">${new Date(comment.timestamp).toLocaleString()}</span>
                 </div>
-                <p>${comment.message}</p>
-                ${deleteBtn}
+                <p class="comment-message">${parseCommentFormatting(comment.message)}</p>
+                ${controls}
             `;
             elements.commentSection.list.appendChild(el);
         });
+        
+        // Odśwież tłumaczenia dla nowo dodanych przycisków
+        if (typeof i18next !== 'undefined') updateContent();
     }
-
     function handleDeepLink() {
         const hash = window.location.hash;
         if (hash && hash.startsWith('#article-')) {
@@ -534,6 +545,13 @@ window.addEventListener('load', () => {
         } else {
             showMainView();
         }
+    }
+
+    function parseCommentFormatting(text) {
+        if(!text) return "";
+        let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        safeText = safeText.replace(/\*(.*?)\*/g, '<i>$1</i>');
+        return safeText;
     }
 
     // =================================================================
@@ -742,3 +760,4 @@ window.addEventListener('load', () => {
 
     init();
 });
+
