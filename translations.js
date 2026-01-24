@@ -23,7 +23,11 @@ const resources = {
                 deleted_comment: "[Komentarz usunięty]",
                 share_text: "Sprawdź ten artykuł na Sekstar News!",
                 link_copied: "Link skopiowany do schowka!",
-                share_api_error: "Twoja przeglądarka nie obsługuje udostępniania."
+                share_api_error: "Twoja przeglądarka nie obsługuje udostępniania.",
+                edit_comment: "Edytuj",
+                delete_comment: "Usuń",
+                save_comment: "Zapisz",
+                cancel_comment: "Anuluj"
             },
             user_panel: {
                 btn_info: "Informacje ogólne",
@@ -113,7 +117,10 @@ const resources = {
                 deleted_comment: "[Comment deleted]",
                 share_text: "Check out this article on Sekstar News!",
                 link_copied: "Link copied to clipboard!",
-                share_api_error: "Your browser does not support sharing."
+                share_api_error: "Your browser does not support sharing.",
+                edit_comment: "Edit", delete_comment: "Delete",
+                save_comment: "Save",
+                cancel_comment: "Cancel"
             },
             user_panel: {
                 btn_info: "General Info",
