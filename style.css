@@ -656,12 +656,16 @@ input[type="color"] {
     position: absolute;
     right: 20px;
     top: 50%;
-    transform: translateY(-50%); /* Idealnie na środku w pionie */
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
-    gap: 15px; /* Odstęp między flagą a profilem */
+    
+    /* ZMIANA TUTAJ: Zwiększamy odstęp, żeby ich rozdzielić */
+    gap: 35px; 
+    
     z-index: 2000;
 }
+
 
 
 
