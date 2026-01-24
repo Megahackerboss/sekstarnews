@@ -19,20 +19,23 @@
         <!-- Tytuł -->
         <div class="nav-title" data-i18n="nav.title">SEKSTAR NEWS</div>
         
-        <!-- === PRZEŁĄCZNIK JĘZYKA (To musi tu być!) === -->
-        <div class="lang-switcher">
-            <div class="current-lang">
-                <!-- Domyślna flaga -->
-                <img src="https://flagcdn.com/w40/pl.png" alt="Język" id="current-flag">
-            </div>
-            <div class="lang-dropdown hidden" id="lang-dropdown">
-                <div class="lang-option" data-lang="pl">
-                    <img src="https://flagcdn.com/w40/pl.png"> Polski
+        <!-- NOWY KONTENER NA IKONY (Prawa strona) -->
+        <div class="nav-actions">
+            
+            <!-- 1. Flaga -->
+            <div class="lang-switcher">
+                <div class="current-lang">
+                    <img src="https://flagcdn.com/w40/pl.png" alt="PL" id="current-flag">
                 </div>
-                <div class="lang-option" data-lang="en">
-                    <img src="https://flagcdn.com/w40/gb.png"> English
+                <div class="lang-dropdown hidden" id="lang-dropdown">
+                    <div class="lang-option" data-lang="pl"><img src="https://flagcdn.com/w40/pl.png"> Polski</div>
+                    <div class="lang-option" data-lang="en"><img src="https://flagcdn.com/w40/gb.png"> English</div>
                 </div>
             </div>
+
+            <!-- 2. Przycisk Profilu (Teraz wewnątrz navbara!) -->
+            <button id="user-panel-button">?</button>
+            
         </div>
     </header>
 
@@ -82,7 +85,7 @@
     </main>
 
     <!-- === MODALE I PANELE === -->
-    <button id="user-panel-button">?</button>
+
 
     <div id="user-panel-view" class="hidden">
         <div id="user-panel-box">
