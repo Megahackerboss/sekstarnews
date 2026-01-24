@@ -17,8 +17,7 @@ body {
     align-items: center;
     border-bottom: 3px solid #4a68a5;
     z-index: 1000;
-    /* Ważne dla pozycjonowania flagi */
-    position: relative; 
+    position: relative; /* Kluczowe dla elementów absolute wewnątrz */
 }
 
 .nav-button {
@@ -371,9 +370,10 @@ body {
 
 /* Zastąp stary styl lub dodaj ten */
 #user-panel-button {
-    position: fixed;
-    top: 10px;      /* Taka sama wysokość jak środek navbara */
-    right: 15px;    /* Przy samej krawędzi */
+    position: absolute; /* Zmieniamy z fixed na absolute, żeby trzymał się paska */
+    top: 50%;
+    transform: translateY(-50%);
+    right: 20px; /* Margines od prawej krawędzi */
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -383,12 +383,12 @@ body {
     font-size: 20px;
     font-weight: bold;
     cursor: pointer;
-    /* Bardzo wysoki Z-Index, żeby był nad navbarem i flagami */
     z-index: 3000; 
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    padding: 0; /* Reset paddingu */
 }
 
 /* Style dla nowego widoku profilu w panelu użytkownika */
@@ -544,10 +544,10 @@ input[type="color"] {
 /* --- LANGUAGE SWITCHER --- */
 .lang-switcher {
     position: absolute;
-    /* Zmieniamy z 20px na 80px, żeby nie nachodziło na przycisk profilu */
-    right: 80px; 
     top: 50%;
     transform: translateY(-50%);
+    /* Obliczenie: 20px (margines prawy) + 40px (szerokość przycisku) + 15px (odstęp) */
+    right: 75px; 
     z-index: 2000;
     cursor: pointer;
 }
@@ -654,6 +654,7 @@ input[type="color"] {
 .lang-option:hover {
     background-color: #3a5a8f;
 }
+
 
 
 
