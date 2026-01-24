@@ -287,12 +287,18 @@ body {
 
 #editor-form {
     background-color: #1f3a61;
-    padding: 30px;
+    padding: 20px;
     border-radius: 10px;
-    border: 2px solid #ffdd4b; /* Złota ramka edytora */
-    width: 100%;
-    max-width: 900px;
+    border: 2px solid #ffdd4b;
+    
+    /* ZMIANA: Okno ma być duże i szerokie */
+    width: 95vw;          /* 95% szerokości ekranu */
+    max-width: 1400px;    /* Maksymalna szerokość */
+    height: 90vh;         /* 90% wysokości ekranu */
+    
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
 }
 #editor-form h2 {
     color: #ffdd4b;
@@ -303,6 +309,9 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
+    overflow-y: auto; /* Scrollowanie wewnątrz formularza */
+    flex-grow: 1;
+    padding-right: 10px;
 }
 .editor-full-width {
     display: flex;
@@ -743,6 +752,7 @@ input[type="color"] {
 .tox-dialog-wrap, .tox-dialog {
     z-index: 10000 !important;
 }
+
 
 
 
