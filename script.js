@@ -17,7 +17,6 @@ window.addEventListener('load', () => {
     const database = firebase.database();
     const auth = firebase.auth();
     const ARTICLES_PER_PAGE = 5;
-    let quillEditor = null; 
 
     // === ELEMENTY DOM ===
     const elements = {
@@ -312,21 +311,32 @@ function saveArticle(e) {
             lastUpdated: Date.now()
         };
         
-        // ZMIANA: Pobieramy treść z Quill
-        const contentHtml = quillEditor.root.innerHTML;
+        // KLUCZOWA ZMIANA: Pobieramy treść z TinyMCE zamiast z textarea
+        let contentHtml = '';
+        if (tinymce.get('editor-content')) {
+            contentHtml = tinymce.get('editor-content').getContent();
+        } else {
+            contentHtml = elements.editorForm.contentInput.value;
+        }
+
         const content = { content: contentHtml };
         
         const updates = {};
         updates[`/articles_meta/${id}`] = meta;
         updates[`/articles_content/${id}`] = content;
+
         database.ref().update(updates).then(() => {
             alert(i18next.t('editor.save_success') || "Zapisano!");
-            // ... reszta logiki zapisu (bez zmian)
             const idx = state.allArticlesMeta.findIndex(a => a.id == id);
-            if(idx > -1) state.allArticlesMeta[idx] = meta; else state.allArticlesMeta.push(meta);
+            if(idx > -1) state.allArticlesMeta[idx] = meta;
+            else state.allArticlesMeta.push(meta);
             state.allArticlesMeta.sort((a,b) => a.order - b.order);
+            
             if(state.currentArticle && state.currentArticle.id == id) displayArticle(id);
-            else { showMainView(); displayNewsList(state.allArticlesMeta); }
+            else {
+                 showMainView();
+                 displayNewsList(state.allArticlesMeta);
+            }
         }).catch(e => alert("Error: " + e.message));
     }
         elements.editorForm.cancelButton.onclick = () => { elements.views.editor.classList.add('hidden'); if(state.currentArticle) elements.views.article.classList.remove('hidden'); else elements.views.main.classList.remove('hidden'); };
@@ -342,30 +352,46 @@ function saveArticle(e) {
         elements.userPanel.addNewArticleBtn.onclick = () => openEditor(null);
 function openEditor(article = null) {
         if (!hasPermission('can_write_articles')) return alert(i18next.t('editor.error_permission') || "Brak uprawnień!");
+        
         elements.userPanel.view.classList.add('hidden');
         elements.editorForm.form.reset();
         
-        // Czyścimy edytor Quill
-        quillEditor.setText('');
+        // Zmienna na treść
+        let contentToSet = '';
 
         if (article) {
-            // Wypełnianie pól... (bez zmian)
             elements.editorForm.idInput.value = article.id;
-            // ... reszta pól
+            elements.editorForm.orderInput.value = article.order || 99;
+            elements.editorForm.dateInput.value = article.date;
+            elements.editorForm.titleInput.value = article.title;
             elements.editorForm.authorInput.value = article.author;
+            elements.editorForm.thumbnailInput.value = article.thumbnail;
+            elements.editorForm.featuredCheckbox.checked = article.featured;
             elements.editorForm.deleteButton.classList.remove('hidden');
             
+            // Pobieramy treść z bazy
             database.ref(`articles_content/${article.id}`).once('value', s => {
-                const contentHtml = s.val() ? s.val().content : '';
-                // Wstawiamy treść do Quill
-                quillEditor.root.innerHTML = contentHtml;
+                contentToSet = s.val() ? s.val().content : '';
+                // Ustawiamy treść w TinyMCE (jeśli jest gotowy)
+                if (tinymce.get('editor-content')) {
+                    tinymce.get('editor-content').setContent(contentToSet);
+                } else {
+                    elements.editorForm.contentInput.value = contentToSet;
+                }
             });
         } else {
-            // ... reszta logiki dla nowego artykułu
             elements.editorForm.idInput.value = Date.now();
+            elements.editorForm.orderInput.value = 1;
+            elements.editorForm.dateInput.value = new Date().toLocaleString('pl-PL');
             elements.editorForm.authorInput.value = state.currentUser ? state.currentUser.nick : 'Admin';
             elements.editorForm.deleteButton.classList.add('hidden');
+            
+            // Czyścimy edytor dla nowego artykułu
+            if (tinymce.get('editor-content')) {
+                tinymce.get('editor-content').setContent('');
+            }
         }
+        
         Object.values(elements.views).forEach(v => v.classList.add('hidden'));
         elements.views.editor.classList.remove('hidden');
     }
@@ -415,19 +441,31 @@ function openEditor(article = null) {
 
 // === Inicjalizacja TinyMCE ===
     function initEditor() {
-        const toolbarOptions = [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            [{ 'align': [] }],
-            ['link', 'image', 'video'],
-            ['clean'],
-            ['code-block'] // Opcja "kod"
-        ];
-        
-        quillEditor = new Quill('#editor-content-quill', {
-            modules: { toolbar: toolbarOptions },
-            theme: 'snow'
+        // Usuwamy starą instancję jeśli istnieje, żeby nie było konfliktów
+        if (tinymce.get('editor-content')) {
+            tinymce.remove('#editor-content');
+        }
+
+        tinymce.init({
+            selector: '#editor-content',
+            height: '100%', // Wypełnij dostępną wysokość
+            menubar: true,  // Pokaż menu (File, Edit itd.) dla łatwiejszego dostępu do kodu
+            promotion: false, // Ukryj przycisk "Upgrade"
+            branding: false,  // Ukryj logo TinyMCE
+            
+            // WAŻNE: Konfiguracja ścieżek dla wersji Open Source
+            base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2',
+            suffix: '.min',
+            
+            // Ciemny motyw
+            skin: 'oxide-dark',
+            content_css: 'dark',
+            
+            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
+            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code', // 'code' pozwala edytować HTML
+            
+            // Dopasowanie kolorów wewnątrz edytora
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; } a { color: #ffdd4b; }'
         });
     }
 
@@ -443,6 +481,5 @@ function openEditor(article = null) {
     }
     init();
 });
-
 
 
