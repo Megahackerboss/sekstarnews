@@ -290,9 +290,13 @@ body {
     padding: 20px;
     border-radius: 10px;
     border: 2px solid #ffdd4b;
-    width: 95vw;
-    max-width: 1000px; /* Nieco węższy, bo jest wyższy */
-    height: 90vh;
+    
+    /* ZMIANA: Okno ma być duże i szerokie */
+    width: 95vw;          /* 95% szerokości ekranu */
+    max-width: 1400px;    /* Maksymalna szerokość */
+    height: 90vh;         /* 90% wysokości ekranu */
+    
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
 }
@@ -749,46 +753,10 @@ input[type="color"] {
     z-index: 10000 !important;
 }
 
-.editor-grid-single-column {
-    overflow-y: auto; /* Scrollowanie */
-    flex-grow: 1;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Odstępy między polami */
-}
 
-.editor-row {
-    display: flex;
-    gap: 15px;
-}
-.editor-row > div {
-    flex: 1;
-}
-#editor-form input[type="text"],
-#editor-form input[type="number"] {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-}
-.editor-actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    flex-shrink: 0; /* Przyciski się nie kurczą */
-}
-#editor-content-quill {
-    height: 300px; /* Startowa wysokość */
-    background-color: white;
-    color: black;
-    border-radius: 4px;
-}
-.ql-toolbar {
-    background-color: #f1f1f1;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-}
+
+
+
 
 
 
