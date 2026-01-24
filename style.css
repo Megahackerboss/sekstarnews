@@ -661,10 +661,11 @@ input[type="color"] {
     align-items: center;
     
     /* ZMIANA TUTAJ: Zwiększamy odstęp, żeby ich rozdzielić */
-    gap: 60px; 
+    gap: 600px; 
     
     z-index: 2000;
 }
+
 
 
 
