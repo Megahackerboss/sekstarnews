@@ -12,16 +12,26 @@
 <body>
 
     <!-- === HEADER === -->
-    <header class="navbar">
+<header class="navbar">
+        <!-- Przycisk Wstecz -->
         <button id="back-button" class="nav-button hidden"></button>
+        
+        <!-- Tytuł -->
         <div class="nav-title" data-i18n="nav.title">SEKSTAR NEWS</div>
         
-        <!-- Language Switcher -->
+        <!-- === PRZEŁĄCZNIK JĘZYKA (To musi tu być!) === -->
         <div class="lang-switcher">
-            <div class="current-lang"><img src="https://flagcdn.com/24x18/pl.png" alt="PL" id="current-flag"></div>
+            <div class="current-lang">
+                <!-- Domyślna flaga -->
+                <img src="https://flagcdn.com/w40/pl.png" alt="Język" id="current-flag">
+            </div>
             <div class="lang-dropdown hidden" id="lang-dropdown">
-                <div class="lang-option" data-lang="pl"><img src="https://flagcdn.com/24x18/pl.png"> Polski</div>
-                <div class="lang-option" data-lang="en"><img src="https://flagcdn.com/24x18/gb.png"> English</div>
+                <div class="lang-option" data-lang="pl">
+                    <img src="https://flagcdn.com/w40/pl.png"> Polski
+                </div>
+                <div class="lang-option" data-lang="en">
+                    <img src="https://flagcdn.com/w40/gb.png"> English
+                </div>
             </div>
         </div>
     </header>
