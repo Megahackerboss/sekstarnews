@@ -441,15 +441,31 @@ function openEditor(article = null) {
 
 // === Inicjalizacja TinyMCE ===
     function initEditor() {
+        // Usuwamy starą instancję jeśli istnieje, żeby nie było konfliktów
+        if (tinymce.get('editor-content')) {
+            tinymce.remove('#editor-content');
+        }
+
         tinymce.init({
-            selector: '#editor-content', // ID twojego textarea
-            height: 400,
-            menubar: false,
-            skin: 'oxide-dark',      // Ciemny motyw
-            content_css: 'dark',     // Ciemne tło w środku
-            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table code help wordcount',
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | code', // 'code' to przycisk źródła
-            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px; background-color: #1f3a61; color: white; }' // Dopasowanie kolorów do strony
+            selector: '#editor-content',
+            height: '100%', // Wypełnij dostępną wysokość
+            menubar: true,  // Pokaż menu (File, Edit itd.) dla łatwiejszego dostępu do kodu
+            promotion: false, // Ukryj przycisk "Upgrade"
+            branding: false,  // Ukryj logo TinyMCE
+            
+            // WAŻNE: Konfiguracja ścieżek dla wersji Open Source
+            base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2',
+            suffix: '.min',
+            
+            // Ciemny motyw
+            skin: 'oxide-dark',
+            content_css: 'dark',
+            
+            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
+            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code', // 'code' pozwala edytować HTML
+            
+            // Dopasowanie kolorów wewnątrz edytora
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; } a { color: #ffdd4b; }'
         });
     }
 
@@ -465,4 +481,5 @@ function openEditor(article = null) {
     }
     init();
 });
+
 
