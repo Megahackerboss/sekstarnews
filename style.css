@@ -276,29 +276,27 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(20, 42, 74, 0.95); /* Ciemne tło, lekko prześwitujące */
-    z-index: 4000; /* Najwyżej */
-    overflow-y: auto;
-    padding: 40px 20px;
-    box-sizing: border-box;
+    background-color: rgba(20, 42, 74, 0.95);
+    z-index: 4000;
     display: flex;
     justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
 }
+
 
 #editor-form {
     background-color: #1f3a61;
-    padding: 20px;
-    border-radius: 10px;
     border: 2px solid #ffdd4b;
-    
-    /* ZMIANA: Okno ma być duże i szerokie */
-    width: 95vw;          /* 95% szerokości ekranu */
-    max-width: 1400px;    /* Maksymalna szerokość */
-    height: 90vh;         /* 90% wysokości ekranu */
-    
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 1600px; /* Bardzo szeroki */
+    height: 95vh;      /* Prawie cała wysokość ekranu */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Układ pionowy: Nagłówek -> Pola -> Edytor -> Przyciski */
+    overflow: hidden;  /* Żeby nic nie wystawało */
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
 }
 #editor-form h2 {
     color: #ffdd4b;
@@ -752,6 +750,71 @@ input[type="color"] {
 .tox-dialog-wrap, .tox-dialog {
     z-index: 10000 !important;
 }
+
+.editor-inputs-container {
+    padding: 15px 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 kolumny dla inputów */
+    gap: 15px;
+    background-color: #142a4a;
+    border-bottom: 2px solid #4a68a5;
+    flex-shrink: 0; /* Nie zmniejszaj tej sekcji */
+}
+.editor-field {
+    display: flex;
+    flex-direction: column;
+}
+.editor-field label {
+    font-size: 12px;
+    color: #aab8d3;
+    margin-bottom: 4px;
+}
+.editor-field input {
+    background-color: #1f3a61;
+    border: 1px solid #4a68a5;
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+}
+.editor-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background-color: #20385a;
+    border: 1px solid #4a68a5;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.editor-checkbox input { margin-right: 10px; }
+.editor-content-area {
+    flex-grow: 1; /* Zajmij całe wolne miejsce */
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    min-height: 0; /* Ważne dla Flexboxa, żeby scroll działał */
+}
+.tox-tinymce {
+    border: none !important;
+    flex-grow: 1 !important;
+    height: 100% !important;
+}
+.editor-actions {
+    padding: 10px 20px;
+    background-color: #142a4a;
+    border-top: 2px solid #4a68a5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.tox-tinymce-aux, .tox-dialog-wrap, .tox-dialog, .tox-menu, .tox-toolbar__overflow {
+    z-index: 10000 !important; /* Musi być wyżej niż #editor-view (4000) */
+}
+
+
+
+
 
 
 
