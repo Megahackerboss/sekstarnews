@@ -293,6 +293,35 @@ window.addEventListener('load', () => {
         document.body.addEventListener('click', e => {
             const card = e.target.closest('.article-card, .slide');
             if(card && !e.target.classList.contains('nav-dot')) window.location.hash = `article-${card.dataset.id}`;
+            // --- LIGHTBOX (POWIĘKSZANIE ZDJĘĆ) ---
+        
+        // 1. Kliknięcie w zdjęcie wewnątrz artykułu
+        const articleContent = document.getElementById('article-content');
+        const lightbox = document.getElementById('image-lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxClose = document.getElementById('lightbox-close');
+
+        if (articleContent && lightbox && lightboxImg) {
+            articleContent.addEventListener('click', (e) => {
+                // Sprawdź czy kliknięto w obrazek (IMG)
+                if (e.target.tagName === 'IMG') {
+                    lightboxImg.src = e.target.src; // Pobierz źródło klikniętego zdjęcia
+                    lightbox.classList.remove('hidden'); // Pokaż lightbox
+                }
+            });
+
+            // 2. Zamykanie krzyżykiem
+            lightboxClose.onclick = () => {
+                lightbox.classList.add('hidden');
+            };
+
+            // 3. Zamykanie kliknięciem w tło
+            lightbox.onclick = (e) => {
+                if (e.target === lightbox) { // Tylko jeśli kliknięto w tło, a nie w zdjęcie
+                    lightbox.classList.add('hidden');
+                }
+            };
+        }
         });
 
         // Edytor
@@ -505,6 +534,7 @@ function initEditor() {
     }
     init();
 });
+
 
 
 
