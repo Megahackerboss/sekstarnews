@@ -166,47 +166,60 @@
     </div>
 
     <!-- 2. Panel Edytora -->
+<!-- 2. Panel Edytora (Przebudowany) -->
     <div id="editor-view" class="hidden">
         <form id="editor-form">
-            <h2 data-i18n="editor.title">Edytor Artykułów</h2>
-            <div class="editor-grid">
+            
+            <!-- Górna sekcja: Metadane -->
+            <div class="editor-inputs-container">
+                <!-- Ukryte ID -->
                 <input type="hidden" id="editor-article-id"> 
-                <div>
-                    <label data-i18n="editor.label_id">ID:</label>
-                    <input type="number" id="editor-id" required style="width: 100%;">
+                
+                <div class="editor-field">
+                    <label>ID:</label>
+                    <input type="number" id="editor-id" required>
                 </div>
-                <div>
-                    <label data-i18n="editor.label_order">Order:</label>
-                    <input type="number" id="editor-order" required style="width: 100%;">
+                <div class="editor-field">
+                    <label>Order:</label>
+                    <input type="number" id="editor-order" required>
                 </div>
-                <div class="editor-full-width">
-                    <label data-i18n="editor.label_title">Tytuł:</label>
-                    <input type="text" id="editor-title" required style="width: 100%;">
+                <div class="editor-field" style="grid-column: span 2;">
+                    <label>Tytuł:</label>
+                    <input type="text" id="editor-title" required>
                 </div>
-                <div>
-                    <label data-i18n="editor.label_author">Autor:</label>
-                    <input type="text" id="editor-author" required style="width: 100%;">
+                
+                <div class="editor-field">
+                    <label>Autor:</label>
+                    <input type="text" id="editor-author" required>
                 </div>
-                <div>
-                    <label data-i18n="editor.label_date">Data:</label>
-                    <input type="text" id="editor-date" required style="width: 100%;">
+                <div class="editor-field">
+                    <label>Data:</label>
+                    <input type="text" id="editor-date" required>
                 </div>
-                <div class="editor-full-width">
-                    <label data-i18n="editor.label_thumb">URL Miniaturki:</label>
-                    <input type="text" id="editor-thumbnail" required style="width: 100%;">
+                <div class="editor-field" style="grid-column: span 2;">
+                    <label>URL Miniaturki:</label>
+                    <input type="text" id="editor-thumbnail" required>
                 </div>
-                <div class="editor-full-width">
-                     <label><input type="checkbox" id="editor-featured"> <span data-i18n="editor.label_featured">Wyróżniony na sliderze?</span></label>
-                </div>
-                <div class="editor-full-width">
-                    <label data-i18n="editor.label_content">Treść (HTML):</label>
-                    <textarea id="editor-content" rows="15" required style="width: 100%;"></textarea>
+                
+                <!-- Wyróżniony (Checkbox na całą szerokość dla widoczności) -->
+                <div style="grid-column: span 4;">
+                    <label class="editor-checkbox">
+                        <input type="checkbox" id="editor-featured"> 
+                        <span>Wyróżniony na sliderze?</span>
+                    </label>
                 </div>
             </div>
-            <div class="editor-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" id="editor-delete" class="delete-button" style="background-color: #d9534f; margin-right: auto;" data-i18n="editor.btn_delete">USUŃ</button>
-                <button type="button" id="editor-cancel" data-i18n="editor.btn_cancel">Anuluj</button>
-                <button type="submit" style="background-color: #28a745;" data-i18n="editor.btn_save">Zapisz</button>
+
+            <!-- Środkowa sekcja: Edytor (Zajmuje resztę miejsca) -->
+            <div class="editor-content-area">
+                <textarea id="editor-content"></textarea>
+            </div>
+
+            <!-- Dolna sekcja: Przyciski -->
+            <div class="editor-actions">
+                <button type="button" id="editor-delete" class="delete-button" style="background-color: #d9534f; margin-right: auto;">USUŃ ARTYKUŁ</button>
+                <button type="button" id="editor-cancel">Anuluj</button>
+                <button type="submit" style="background-color: #28a745; padding: 10px 30px; font-size: 18px;">ZAPISZ</button>
             </div>
         </form>
     </div>
