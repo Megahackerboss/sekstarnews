@@ -473,14 +473,13 @@ function initEditor() {
 
         tinymce.init({
             selector: '#editor-content',
-            // Ważne: usuwamy height: 100%, bo CSS (flex) teraz tym zarządza
-            // TinyMCE automatycznie wypełni rodzica
-            resize: false, // Wyłączamy ręczne zmienianie rozmiaru
+            // Edytor wypełni kontener .editor-content-area (który ma 800px w CSS)
+            height: '100%', 
+            resize: false, // Wyłączamy "chwytak" do zmiany rozmiaru, bo mamy duży scroll
             menubar: true,
             promotion: false,
             branding: false,
             
-            // Konfiguracja bez API
             base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2',
             suffix: '.min',
             
@@ -488,7 +487,7 @@ function initEditor() {
             content_css: 'dark',
             
             plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code', // 'code' zadziała dzięki fixowi CSS
+            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code',
             
             content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; padding: 15px; } a { color: #ffdd4b; }'
         });
@@ -506,6 +505,7 @@ function initEditor() {
     }
     init();
 });
+
 
 
 
