@@ -299,10 +299,20 @@ window.addEventListener('load', () => {
         elements.editorForm.form.onsubmit = e => { e.preventDefault(); /* saveArticle */ saveArticle(e); };
 function saveArticle(e) {
         e.preventDefault();
+        
+        // 1. Wymuś zapisanie treści z TinyMCE do textarea (ważne!)
+        if (tinymce.get('editor-content')) {
+            tinymce.triggerSave();
+        }
+
         const id = elements.editorForm.idInput.value;
+        
+        // Walidacja ID
+        if(!id) return alert("Błąd: Brak ID artykułu.");
+
         const meta = {
             id: parseInt(id),
-            order: parseInt(elements.editorForm.orderInput.value),
+            order: parseInt(elements.editorForm.orderInput.value) || 99,
             date: elements.editorForm.dateInput.value,
             title: elements.editorForm.titleInput.value,
             author: elements.editorForm.authorInput.value,
@@ -311,7 +321,7 @@ function saveArticle(e) {
             lastUpdated: Date.now()
         };
         
-        // KLUCZOWA ZMIANA: Pobieramy treść z TinyMCE zamiast z textarea
+        // 2. Pobierz treść
         let contentHtml = '';
         if (tinymce.get('editor-content')) {
             contentHtml = tinymce.get('editor-content').getContent();
@@ -325,19 +335,35 @@ function saveArticle(e) {
         updates[`/articles_meta/${id}`] = meta;
         updates[`/articles_content/${id}`] = content;
 
+        console.log("Próba zapisu:", updates); // Debugging
+
         database.ref().update(updates).then(() => {
             alert(i18next.t('editor.save_success') || "Zapisano!");
+            
+            // Aktualizacja lokalnego stanu
             const idx = state.allArticlesMeta.findIndex(a => a.id == id);
             if(idx > -1) state.allArticlesMeta[idx] = meta;
             else state.allArticlesMeta.push(meta);
+            
             state.allArticlesMeta.sort((a,b) => a.order - b.order);
             
-            if(state.currentArticle && state.currentArticle.id == id) displayArticle(id);
-            else {
+            // Odświeżenie widoku
+            if(state.currentArticle && state.currentArticle.id == id) {
+                displayArticle(id);
+            } else {
                  showMainView();
                  displayNewsList(state.allArticlesMeta);
             }
-        }).catch(e => alert("Error: " + e.message));
+            
+            // Zamknij edytor
+            elements.views.editor.classList.add('hidden');
+            if(state.currentArticle) elements.views.article.classList.remove('hidden'); 
+            else elements.views.main.classList.remove('hidden');
+
+        }).catch(e => {
+            console.error(e);
+            alert("Błąd zapisu: " + e.message);
+        });
     }
         elements.editorForm.cancelButton.onclick = () => { elements.views.editor.classList.add('hidden'); if(state.currentArticle) elements.views.article.classList.remove('hidden'); else elements.views.main.classList.remove('hidden'); };
         elements.editorForm.deleteButton.onclick = () => {
@@ -440,32 +466,31 @@ function openEditor(article = null) {
     }
 
 // === Inicjalizacja TinyMCE ===
-    function initEditor() {
-        // Usuwamy starą instancję jeśli istnieje, żeby nie było konfliktów
+function initEditor() {
         if (tinymce.get('editor-content')) {
             tinymce.remove('#editor-content');
         }
 
         tinymce.init({
             selector: '#editor-content',
-            height: '100%', // Wypełnij dostępną wysokość
-            menubar: true,  // Pokaż menu (File, Edit itd.) dla łatwiejszego dostępu do kodu
-            promotion: false, // Ukryj przycisk "Upgrade"
-            branding: false,  // Ukryj logo TinyMCE
+            // Ważne: usuwamy height: 100%, bo CSS (flex) teraz tym zarządza
+            // TinyMCE automatycznie wypełni rodzica
+            resize: false, // Wyłączamy ręczne zmienianie rozmiaru
+            menubar: true,
+            promotion: false,
+            branding: false,
             
-            // WAŻNE: Konfiguracja ścieżek dla wersji Open Source
+            // Konfiguracja bez API
             base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2',
             suffix: '.min',
             
-            // Ciemny motyw
             skin: 'oxide-dark',
             content_css: 'dark',
             
             plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code', // 'code' pozwala edytować HTML
+            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code', // 'code' zadziała dzięki fixowi CSS
             
-            // Dopasowanie kolorów wewnątrz edytora
-            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; } a { color: #ffdd4b; }'
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; padding: 15px; } a { color: #ffdd4b; }'
         });
     }
 
@@ -481,5 +506,6 @@ function openEditor(article = null) {
     }
     init();
 });
+
 
 
