@@ -280,9 +280,9 @@ body {
     z-index: 4000;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
+    align-items: flex-start; /* Zaczynamy od góry, nie od środka */
+    padding: 0;
+    overflow-y: auto; /* Pozwala scrollować całe tło, jeśli formularz jest długi */
 }
 
 
@@ -290,13 +290,18 @@ body {
     background-color: #1f3a61;
     border: 2px solid #ffdd4b;
     border-radius: 8px;
-    width: 100%;
-    max-width: 1600px; /* Bardzo szeroki */
-    height: 95vh;      /* Prawie cała wysokość ekranu */
+    width: 95%;
+    max-width: 1400px;
+    /* ZMIANA: Usuwamy fixed height, dajemy auto */
+    height: auto; 
+    min-height: 90vh;
     display: flex;
-    flex-direction: column; /* Układ pionowy: Nagłówek -> Pola -> Edytor -> Przyciski */
-    overflow: hidden;  /* Żeby nic nie wystawało */
+    flex-direction: column;
     box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    /* Odstępy, żeby formularz nie dotykał krawędzi przy scrollowaniu */
+    margin-top: 50px; 
+    margin-bottom: 50px; 
+    position: relative; /* Ważne dla pozycjonowania dzieci */
 }
 #editor-form h2 {
     color: #ffdd4b;
@@ -754,11 +759,10 @@ input[type="color"] {
 .editor-inputs-container {
     padding: 15px 20px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 kolumny dla inputów */
+    grid-template-columns: repeat(4, 1fr);
     gap: 15px;
     background-color: #142a4a;
     border-bottom: 2px solid #4a68a5;
-    flex-shrink: 0; /* Nie zmniejszaj tej sekcji */
 }
 .editor-field {
     display: flex;
@@ -788,29 +792,29 @@ input[type="color"] {
 }
 .editor-checkbox input { margin-right: 10px; }
 .editor-content-area {
-    flex-grow: 1; /* Zajmij całe wolne miejsce */
-    display: flex;
-    flex-direction: column;
+    width: 100%;
+    /* ZMIANA: Sztywna, duża wysokość wymuszająca scroll */
+    height: 800px; 
     padding: 0;
-    min-height: 0; /* Ważne dla Flexboxa, żeby scroll działał */
+    position: relative;
+    background-color: #20385a;
 }
 .tox-tinymce {
     border: none !important;
-    flex-grow: 1 !important;
-    height: 100% !important;
+    height: 100% !important; /* Wypełnij te 800px */
 }
 .editor-actions {
-    padding: 10px 20px;
+    padding: 20px;
     background-color: #142a4a;
     border-top: 2px solid #4a68a5;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    flex-shrink: 0;
 }
 .tox-tinymce-aux, .tox-dialog-wrap, .tox-dialog, .tox-menu, .tox-toolbar__overflow {
-    z-index: 10000 !important; /* Musi być wyżej niż #editor-view (4000) */
+    z-index: 10000 !important;
 }
+
 
 
 
