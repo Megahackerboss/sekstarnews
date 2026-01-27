@@ -1,6 +1,8 @@
 window.addEventListener('load', () => {
 
-    // === KONFIGURACJA ===
+    // =================================================================
+    // === 1. KONFIGURACJA =============================================
+    // =================================================================
     if (typeof firebase === 'undefined') return console.error("Firebase error");
 
     const firebaseConfig = {
@@ -18,7 +20,9 @@ window.addEventListener('load', () => {
     const auth = firebase.auth();
     const ARTICLES_PER_PAGE = 5;
 
-    // === ELEMENTY DOM ===
+    // =================================================================
+    // === 2. ELEMENTY DOM =============================================
+    // =================================================================
     const elements = {
         views: { main: document.getElementById('main-view'), article: document.getElementById('article-view'), editor: document.getElementById('editor-view'), userPanel: document.getElementById('user-panel-view') },
         backButton: document.getElementById('back-button'),
@@ -43,7 +47,9 @@ window.addEventListener('load', () => {
 
     if(document.querySelector('#profile-perms-content')) document.querySelector('#profile-perms-content').prepend(elements.userPanel.addNewArticleBtn);
 
-    // === STAN ===
+    // =================================================================
+    // === 3. STAN APLIKACJI ===========================================
+    // =================================================================
     let localUserId = localStorage.getItem('localUserId') || `guest_${Math.random().toString(36).substr(2, 9)}`;
     try { localStorage.setItem('localUserId', localUserId); } catch(e){}
 
@@ -55,7 +61,9 @@ window.addEventListener('load', () => {
         sliderInterval: null, currentSlideIndex: 0
     };
 
-    // === I18N ===
+    // =================================================================
+    // === 4. I18N (JĘZYKI) ============================================
+    // =================================================================
     function initI18n() {
         if (typeof i18next === 'undefined') return;
         i18next.init({
@@ -86,7 +94,9 @@ window.addEventListener('load', () => {
         });
     }
 
-    // === LOGIKA ===
+    // =================================================================
+    // === 5. FUNKCJE GŁÓWNE (LOGIKA) ==================================
+    // =================================================================
     function loadRolesConfig() {
         database.ref('roles_config').on('value', snap => {
             state.rolesConfig = snap.val() || {};
@@ -135,7 +145,71 @@ window.addEventListener('load', () => {
         if(typeof i18next !== 'undefined') elements.userPanel.addNewArticleBtn.textContent = i18next.t('user_panel.add_new_article');
     }
 
-    // --- ARTYKUŁY ---
+    // --- Edytor ---
+    function initEditor() {
+        if (typeof tinymce === 'undefined') return;
+        if (tinymce.get('editor-content')) tinymce.remove('#editor-content');
+        tinymce.init({
+            selector: '#editor-content',
+            height: '100%', resize: false, menubar: true, promotion: false, branding: false,
+            base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2', suffix: '.min',
+            skin: 'oxide-dark', content_css: 'dark',
+            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
+            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code',
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; padding: 15px; } a { color: #ffdd4b; }'
+        });
+    }
+
+    function openEditor(article = null) {
+        if (!hasPermission('can_write_articles')) return alert(i18next.t('editor.error_permission') || "Brak uprawnień!");
+        elements.userPanel.view.classList.add('hidden');
+        elements.editorForm.form.reset();
+        
+        let contentToSet = '';
+        if (article) {
+            elements.editorForm.idInput.value = article.id; elements.editorForm.orderInput.value = article.order || 99; elements.editorForm.dateInput.value = article.date;
+            elements.editorForm.titleInput.value = article.title; elements.editorForm.authorInput.value = article.author; elements.editorForm.thumbnailInput.value = article.thumbnail;
+            elements.editorForm.featuredCheckbox.checked = article.featured; elements.editorForm.deleteButton.classList.remove('hidden');
+            database.ref(`articles_content/${article.id}`).once('value', s => {
+                contentToSet = s.val() ? s.val().content : '';
+                if(tinymce.get('editor-content')) tinymce.get('editor-content').setContent(contentToSet);
+                else elements.editorForm.contentInput.value = contentToSet;
+            });
+        } else {
+            elements.editorForm.idInput.value = Date.now(); elements.editorForm.orderInput.value = 1; elements.editorForm.dateInput.value = new Date().toLocaleString('pl-PL');
+            elements.editorForm.authorInput.value = state.currentUser ? state.currentUser.nick : 'Admin'; elements.editorForm.deleteButton.classList.add('hidden');
+            if(tinymce.get('editor-content')) tinymce.get('editor-content').setContent('');
+        }
+        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
+        elements.views.editor.classList.remove('hidden');
+    }
+
+    function saveArticle(e) {
+        e.preventDefault();
+        if (tinymce.get('editor-content')) tinymce.triggerSave();
+        const id = elements.editorForm.idInput.value;
+        if(!id) return alert("Błąd: Brak ID.");
+        
+        const meta = {
+            id: parseInt(id), order: parseInt(elements.editorForm.orderInput.value) || 99, date: elements.editorForm.dateInput.value,
+            title: elements.editorForm.titleInput.value, author: elements.editorForm.authorInput.value, thumbnail: elements.editorForm.thumbnailInput.value,
+            featured: elements.editorForm.featuredCheckbox.checked, lastUpdated: Date.now()
+        };
+        const content = { content: tinymce.get('editor-content') ? tinymce.get('editor-content').getContent() : elements.editorForm.contentInput.value };
+        
+        const updates = {}; updates[`/articles_meta/${id}`] = meta; updates[`/articles_content/${id}`] = content;
+        database.ref().update(updates).then(() => {
+            alert(i18next.t('editor.save_success') || "Zapisano!");
+            const idx = state.allArticlesMeta.findIndex(a => a.id == id);
+            if(idx > -1) state.allArticlesMeta[idx] = meta; else state.allArticlesMeta.push(meta);
+            state.allArticlesMeta.sort((a,b) => a.order - b.order);
+            if(state.currentArticle && state.currentArticle.id == id) displayArticle(id); else { showMainView(); displayNewsList(state.allArticlesMeta); }
+            elements.views.editor.classList.add('hidden');
+            if(state.currentArticle) elements.views.article.classList.remove('hidden'); else elements.views.main.classList.remove('hidden');
+        }).catch(e => alert("Błąd: " + e.message));
+    }
+
+    // --- ARTYKUŁY I LISTA ---
     function setupFeaturedSlider(articles) {
         if (articles.length === 0) { elements.slider.container.style.display = 'none'; return; }
         elements.slider.container.style.display = 'block';
@@ -263,8 +337,30 @@ window.addEventListener('load', () => {
         if (hash && hash.startsWith('#article-')) displayArticle(hash.substring(9)); else showMainView();
     }
 
-    // === EVENTY ===
+    // =================================================================
+    // === 6. EVENTY (BINDING) =========================================
+    // =================================================================
     function bindEvents() {
+        // --- DELEGACJA DLA PRZYCISKU PROFILU (NAPRAWA BŁĘDU 0.5s) ---
+        // Zamiast przypinać do elements.userPanel.button, nasłuchujemy na dokumencie
+        document.addEventListener('click', (e) => {
+            // Sprawdź czy kliknięto przycisk profilu (lub jego dziecko, np. ikonę)
+            if (e.target.closest('#user-panel-button')) {
+                updateUserInfoFields(); // Upewnij się, że dane są świeże
+                elements.userPanel.view.classList.remove('hidden');
+                return;
+            }
+            // Zamknięcie panelu
+            if (e.target.id === 'user-panel-cancel' || e.target.id === 'auth-cancel-button') {
+                elements.userPanel.view.classList.add('hidden');
+            }
+            // Wylogowanie
+            if (e.target.id === 'user-panel-logout') {
+                auth.signOut();
+                elements.userPanel.view.classList.add('hidden');
+            }
+        });
+
         if(elements.langSwitcher.current) elements.langSwitcher.current.onclick = () => elements.langSwitcher.dropdown.classList.toggle('hidden');
         document.querySelectorAll('.lang-option').forEach(opt => opt.onclick = () => changeLanguage(opt.dataset.lang));
 
@@ -280,12 +376,6 @@ window.addEventListener('load', () => {
         pBtns.loginBtn.onclick = () => switchTab(pBtns.loginBtn, pCont.login, aBtns, aCont);
         pBtns.registerBtn.onclick = () => switchTab(pBtns.registerBtn, pCont.register, aBtns, aCont);
 
-        // Panel
-        elements.userPanel.button.onclick = () => { updateUserInfoFields(); elements.userPanel.view.classList.remove('hidden'); };
-        elements.userPanel.closePanelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
-        elements.userPanel.authCancelBtn.onclick = () => elements.userPanel.view.classList.add('hidden');
-        elements.userPanel.logoutBtn.onclick = () => { auth.signOut(); elements.userPanel.view.classList.add('hidden'); };
-
         // Nawigacja
         elements.loadMoreArticlesBtn.onclick = loadMoreArticles;
         elements.backButton.onclick = () => window.location.hash = '';
@@ -293,107 +383,22 @@ window.addEventListener('load', () => {
         document.body.addEventListener('click', e => {
             const card = e.target.closest('.article-card, .slide');
             if(card && !e.target.classList.contains('nav-dot')) window.location.hash = `article-${card.dataset.id}`;
-            // --- LIGHTBOX (POWIĘKSZANIE ZDJĘĆ) ---
-        
-        // 1. Kliknięcie w zdjęcie wewnątrz artykułu
-        const articleContent = document.getElementById('article-content');
-        const lightbox = document.getElementById('image-lightbox');
-        const lightboxImg = document.getElementById('lightbox-img');
-        const lightboxClose = document.getElementById('lightbox-close');
-
-        if (articleContent && lightbox && lightboxImg) {
-            articleContent.addEventListener('click', (e) => {
-                // Sprawdź czy kliknięto w obrazek (IMG)
-                if (e.target.tagName === 'IMG') {
-                    lightboxImg.src = e.target.src; // Pobierz źródło klikniętego zdjęcia
-                    lightbox.classList.remove('hidden'); // Pokaż lightbox
+            // Lightbox
+            const articleContent = document.getElementById('article-content');
+            if (articleContent && e.target.tagName === 'IMG' && articleContent.contains(e.target)) {
+                const lightbox = document.getElementById('image-lightbox');
+                if(lightbox) {
+                    document.getElementById('lightbox-img').src = e.target.src;
+                    lightbox.classList.remove('hidden');
                 }
-            });
-
-            // 2. Zamykanie krzyżykiem
-            lightboxClose.onclick = () => {
-                lightbox.classList.add('hidden');
-            };
-
-            // 3. Zamykanie kliknięciem w tło
-            lightbox.onclick = (e) => {
-                if (e.target === lightbox) { // Tylko jeśli kliknięto w tło, a nie w zdjęcie
-                    lightbox.classList.add('hidden');
-                }
-            };
-        }
+            }
+            if (e.target.id === 'lightbox-close' || e.target.id === 'image-lightbox') {
+                document.getElementById('image-lightbox').classList.add('hidden');
+            }
         });
 
         // Edytor
-        elements.editorForm.form.onsubmit = e => { e.preventDefault(); /* saveArticle */ saveArticle(e); };
-function saveArticle(e) {
-        e.preventDefault();
-        
-        // 1. Wymuś zapisanie treści z TinyMCE do textarea (ważne!)
-        if (tinymce.get('editor-content')) {
-            tinymce.triggerSave();
-        }
-
-        const id = elements.editorForm.idInput.value;
-        
-        // Walidacja ID
-        if(!id) return alert("Błąd: Brak ID artykułu.");
-
-        const meta = {
-            id: parseInt(id),
-            order: parseInt(elements.editorForm.orderInput.value) || 99,
-            date: elements.editorForm.dateInput.value,
-            title: elements.editorForm.titleInput.value,
-            author: elements.editorForm.authorInput.value,
-            thumbnail: elements.editorForm.thumbnailInput.value,
-            featured: elements.editorForm.featuredCheckbox.checked,
-            lastUpdated: Date.now()
-        };
-        
-        // 2. Pobierz treść
-        let contentHtml = '';
-        if (tinymce.get('editor-content')) {
-            contentHtml = tinymce.get('editor-content').getContent();
-        } else {
-            contentHtml = elements.editorForm.contentInput.value;
-        }
-
-        const content = { content: contentHtml };
-        
-        const updates = {};
-        updates[`/articles_meta/${id}`] = meta;
-        updates[`/articles_content/${id}`] = content;
-
-        console.log("Próba zapisu:", updates); // Debugging
-
-        database.ref().update(updates).then(() => {
-            alert(i18next.t('editor.save_success') || "Zapisano!");
-            
-            // Aktualizacja lokalnego stanu
-            const idx = state.allArticlesMeta.findIndex(a => a.id == id);
-            if(idx > -1) state.allArticlesMeta[idx] = meta;
-            else state.allArticlesMeta.push(meta);
-            
-            state.allArticlesMeta.sort((a,b) => a.order - b.order);
-            
-            // Odświeżenie widoku
-            if(state.currentArticle && state.currentArticle.id == id) {
-                displayArticle(id);
-            } else {
-                 showMainView();
-                 displayNewsList(state.allArticlesMeta);
-            }
-            
-            // Zamknij edytor
-            elements.views.editor.classList.add('hidden');
-            if(state.currentArticle) elements.views.article.classList.remove('hidden'); 
-            else elements.views.main.classList.remove('hidden');
-
-        }).catch(e => {
-            console.error(e);
-            alert("Błąd zapisu: " + e.message);
-        });
-    }
+        elements.editorForm.form.onsubmit = saveArticle;
         elements.editorForm.cancelButton.onclick = () => { elements.views.editor.classList.add('hidden'); if(state.currentArticle) elements.views.article.classList.remove('hidden'); else elements.views.main.classList.remove('hidden'); };
         elements.editorForm.deleteButton.onclick = () => {
             const id = elements.editorForm.idInput.value;
@@ -405,77 +410,30 @@ function saveArticle(e) {
         };
         if(elements.fabEdit) elements.fabEdit.onclick = () => openEditor(state.currentArticle);
         elements.userPanel.addNewArticleBtn.onclick = () => openEditor(null);
-function openEditor(article = null) {
-        if (!hasPermission('can_write_articles')) return alert(i18next.t('editor.error_permission') || "Brak uprawnień!");
-        
-        elements.userPanel.view.classList.add('hidden');
-        elements.editorForm.form.reset();
-        
-        // Zmienna na treść
-        let contentToSet = '';
 
-        if (article) {
-            elements.editorForm.idInput.value = article.id;
-            elements.editorForm.orderInput.value = article.order || 99;
-            elements.editorForm.dateInput.value = article.date;
-            elements.editorForm.titleInput.value = article.title;
-            elements.editorForm.authorInput.value = article.author;
-            elements.editorForm.thumbnailInput.value = article.thumbnail;
-            elements.editorForm.featuredCheckbox.checked = article.featured;
-            elements.editorForm.deleteButton.classList.remove('hidden');
-            
-            // Pobieramy treść z bazy
-            database.ref(`articles_content/${article.id}`).once('value', s => {
-                contentToSet = s.val() ? s.val().content : '';
-                // Ustawiamy treść w TinyMCE (jeśli jest gotowy)
-                if (tinymce.get('editor-content')) {
-                    tinymce.get('editor-content').setContent(contentToSet);
-                } else {
-                    elements.editorForm.contentInput.value = contentToSet;
-                }
-            });
-        } else {
-            elements.editorForm.idInput.value = Date.now();
-            elements.editorForm.orderInput.value = 1;
-            elements.editorForm.dateInput.value = new Date().toLocaleString('pl-PL');
-            elements.editorForm.authorInput.value = state.currentUser ? state.currentUser.nick : 'Admin';
-            elements.editorForm.deleteButton.classList.add('hidden');
-            
-            // Czyścimy edytor dla nowego artykułu
-            if (tinymce.get('editor-content')) {
-                tinymce.get('editor-content').setContent('');
-            }
-        }
-        
-        Object.values(elements.views).forEach(v => v.classList.add('hidden'));
-        elements.views.editor.classList.remove('hidden');
-    }
-
-        // Share
+        // Share & Cache
         elements.articleDetail.shareButton.onclick = async () => { if (!state.currentArticle) return; const url = window.location.href; try { if (navigator.share) await navigator.share({title: state.currentArticle.title, url: url}); else throw new Error('no share'); } catch (e) { try { await navigator.clipboard.writeText(url); alert(i18next.t('article.link_copied')); } catch(err){ prompt("Copy:", url); } } };
         if(elements.clearCacheBtn) elements.clearCacheBtn.onclick = () => { Object.keys(localStorage).forEach(k => { if(k.startsWith('article_')) localStorage.removeItem(k); }); alert("Cache cleared"); };
 
-        // Form Submit Handlers
+        // Formularze
         elements.userPanel.loginEmail.closest('form').onsubmit = e => { e.preventDefault(); auth.signInWithEmailAndPassword(elements.userPanel.loginEmail.value, elements.userPanel.loginPassword.value).then(() => elements.userPanel.view.classList.add('hidden')).catch(e => alert(e.message)); };
         elements.userPanel.registerEmail.closest('form').onsubmit = e => { e.preventDefault(); const nick = elements.userPanel.registerNick.value.trim(); database.ref(`takenNicks/${nick.toLowerCase()}`).once('value', s => { if(s.exists()) return alert(i18next.t('alerts.nick_taken')); auth.createUserWithEmailAndPassword(elements.userPanel.registerEmail.value, elements.userPanel.registerPassword.value).then(cred => { const u = cred.user; database.ref().update({ [`users/${u.uid}`]: { nick: nick, email: u.email, role: 'user', color: '#ffffff' }, [`takenNicks/${nick.toLowerCase()}`]: u.uid }); elements.userPanel.view.classList.add('hidden'); }).catch(e => alert(e.message)); }); };
         elements.userPanel.profileInfoForm.onsubmit = e => { e.preventDefault(); const newNick = elements.userPanel.profileNickInput.value.trim(); const newColor = elements.userPanel.profileColorInput.value; const oldNick = state.currentUser.nick; const updates = {}; updates[`users/${state.currentUser.uid}/nick`] = newNick; updates[`users/${state.currentUser.uid}/color`] = newColor; if(newNick.toLowerCase() !== oldNick.toLowerCase()) { updates[`takenNicks/${oldNick.toLowerCase()}`] = null; updates[`takenNicks/${newNick.toLowerCase()}`] = state.currentUser.uid; } database.ref().update(updates).then(() => { alert(i18next.t('alerts.saved')); state.currentUser.nick = newNick; state.currentUser.color = newColor; updateUserInfoFields(); }).catch(e => alert(e.message)); };
         elements.userPanel.adminAssignBtn.onclick = assignRole; function assignRole() { const nick = elements.userPanel.adminNickInput.value.trim(); const role = elements.userPanel.adminRoleSelect.value; if(!nick) return alert(i18next.t('alerts.enter_nick')); database.ref('users').orderByChild('nick').equalTo(nick).once('value', snap => { if (!snap.exists()) return alert(i18next.t('alerts.user_not_found')); const uid = Object.keys(snap.val())[0]; database.ref(`users/${uid}/role`).set(role).then(() => alert(`${i18next.t('alerts.rank_assigned')}: ${role}`)).catch(e => alert(e.message)); }); }
         elements.userPanel.roleSaveBtn.onclick = () => { const name = elements.userPanel.roleEditorName.value.trim().toLowerCase(); if(!name) return; database.ref(`roles_config/${name}`).set({ can_write_articles: elements.userPanel.rolePermWrite.checked, can_delete_comments: elements.userPanel.rolePermDelete.checked, can_manage_roles: elements.userPanel.rolePermManage.checked }).then(() => alert(i18next.t('alerts.saved'))); };
 
-        // Comments
+        // Komentarze (Dodawanie)
         elements.commentSection.form.onsubmit = e => { e.preventDefault(); const msg = elements.commentSection.messageInput.value.trim(); const author = state.currentUser ? state.currentUser.nick : elements.commentSection.nameInput.value; const uid = state.currentUser ? state.currentUser.uid : state.localUserId; if(!msg || !author) return; const pushC = () => { database.ref(`comments/${state.currentArticle.id}`).push().set({ author, message: msg, userId: uid, userColor: state.currentUser?.color||'#fff', timestamp: firebase.database.ServerValue.TIMESTAMP }); elements.commentSection.messageInput.value = ''; }; if(!state.currentUser) database.ref(`takenNicks/${author.toLowerCase()}`).once('value', s=> { if(s.exists()) alert(i18next.t('alerts.nick_registered')); else pushC(); }); else pushC(); };
         
-        // KOMENTARZE: KLIKNIĘCIA (DELETE & EDIT)
+        // Komentarze (Edycja/Usuwanie) - Delegacja
         elements.commentSection.list.addEventListener('click', (e) => {
             const commentEl = e.target.closest('.comment');
             if(!commentEl) return;
             const commentId = commentEl.dataset.commentId;
 
-            // Delete
             if (e.target.classList.contains('delete-comment-btn')) {
                 if(confirm(i18next.t('alerts.confirm_delete_comment') || "Usunąć?")) database.ref(`comments/${state.currentArticle.id}/${commentId}`).remove();
             }
-            // Edit
             if (e.target.classList.contains('edit-comment-btn')) {
                 const messageP = commentEl.querySelector('.comment-message');
                 const controlsDiv = commentEl.querySelector('.comment-controls');
@@ -494,37 +452,9 @@ function openEditor(article = null) {
         });
     }
 
-// === Inicjalizacja TinyMCE ===
-function initEditor() {
-        if (tinymce.get('editor-content')) {
-            tinymce.remove('#editor-content');
-        }
-
-        tinymce.init({
-            selector: '#editor-content',
-            // Edytor wypełni kontener .editor-content-area (który ma 800px w CSS)
-            height: '100%', 
-            resize: false, // Wyłączamy "chwytak" do zmiany rozmiaru, bo mamy duży scroll
-            menubar: true,
-            promotion: false,
-            branding: false,
-            
-            base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2',
-            suffix: '.min',
-            
-            skin: 'oxide-dark',
-            content_css: 'dark',
-            
-            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image code',
-            
-            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px; background-color: #20385a; color: #ffffff; padding: 15px; } a { color: #ffdd4b; }'
-        });
-    }
-
     // === START ===
     function init() {
-        initI18n(); bindEvents();initEditor();loadRolesConfig(); loadInitialArticles();
+        initI18n(); bindEvents(); initEditor(); loadRolesConfig(); loadInitialArticles();
         auth.onAuthStateChanged(async u => {
             state.currentUser = null;
             if(u) { const s = await database.ref(`users/${u.uid}`).once('value'); state.currentUser = { uid: u.uid, ...s.val() }; }
@@ -534,8 +464,3 @@ function initEditor() {
     }
     init();
 });
-
-
-
-
-
