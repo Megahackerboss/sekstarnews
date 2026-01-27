@@ -115,7 +115,7 @@ window.addEventListener('load', () => {
             elements.fabEdit.classList.toggle('hidden', !(isArticleView && hasPermission('can_write_articles')));
         }
     }
-    function updateUserInfoFields() {
+function updateUserInfoFields() {
         if (state.currentUser) {
             elements.userPanel.button.textContent = state.currentUser.nick.charAt(0).toUpperCase();
             elements.userPanel.button.style.backgroundColor = state.currentUser.color || '#4a68a5';
@@ -126,13 +126,24 @@ window.addEventListener('load', () => {
             elements.userPanel.profileColorInput.value = state.currentUser.color || '#ffffff';
             elements.commentSection.nameInput.value = state.currentUser.nick;
             elements.commentSection.nameInput.disabled = false;
-            elements.userPanel.infoView.classList.remove('hidden'); elements.userPanel.authView.classList.add('hidden');
+            elements.userPanel.infoView.classList.remove('hidden'); 
+            elements.userPanel.authView.classList.add('hidden');
         } else {
-            elements.userPanel.button.textContent = '?'; elements.userPanel.button.style.backgroundColor = '#4a68a5';
-            elements.commentSection.nameInput.value = ''; elements.commentSection.nameInput.disabled = false;
-            elements.userPanel.infoView.classList.add('hidden'); elements.userPanel.authView.classList.remove('hidden');
+            elements.userPanel.button.textContent = '?'; 
+            elements.userPanel.button.style.backgroundColor = '#4a68a5';
+            elements.commentSection.nameInput.value = ''; 
+            elements.commentSection.nameInput.disabled = false;
+            elements.userPanel.infoView.classList.add('hidden'); 
+            elements.userPanel.authView.classList.remove('hidden');
         }
-        if(typeof i18next !== 'undefined') elements.userPanel.addNewArticleBtn.textContent = i18next.t('user_panel.add_new_article');
+        
+        if(typeof i18next !== 'undefined') {
+            elements.userPanel.addNewArticleBtn.textContent = i18next.t('user_panel.add_new_article');
+        }
+
+        // === NAPRAWA MIGANIA ===
+        // Usuwamy klasę hidden dopiero teraz, gdy wiemy jaki kolor i literkę nadać
+        elements.userPanel.button.classList.remove('hidden');
     }
 
     // --- ARTYKUŁY ---
@@ -534,6 +545,7 @@ function initEditor() {
     }
     init();
 });
+
 
 
 
